@@ -219,6 +219,8 @@
 
 <script>
 // [01] VARIABLES GLOBALES Y ESTADO
+// [01] CONFIGURACIÓN DE LA NUBE
+const SCRIPT_URL = https://script.google.com/macros/s/AKfycbwoJOBwrPMDuKUH5hCQGsunqOJORaurterImsMZ5aP3bg8-bX7DESPysPk-Lo4w5izoSA/exec;
     let currentSection = '';
     let monitorActivo = 'todos';
     let currentView = 'scr-inicio';
@@ -250,9 +252,19 @@
     }
     repairDB();
     
-    function saveData() { 
-        localStorage.setItem('melide_db', JSON.stringify(db)); 
-    }
+    function saveData() {
+    // 1. Sigue guardando en el móvil (por si no hay internet)
+    localStorage.setItem('escolas_db', JSON.stringify(db));
+
+    // 2. Envía una copia a Google Sheets de forma invisible
+    fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors', // Para evitar bloqueos de seguridad
+        body: JSON.stringify(db)
+    })
+    .then(() => console.log("Sincronizado con la nube"))
+    .catch(err => console.error("Error al sincronizar:", err));
+}
 
     function closeModal() {
         document.getElementById('modal-overlay').classList.remove('active');
@@ -1220,6 +1232,20 @@ function importarDatos(event) {
     };
     reader.readAsText(file);
 }
+// Sincronización inicial al abrir la App
+window.addEventListener('load', () => {
+    fetch(SCRIPT_URL)
+        .then(response => response.json())
+        .then(data => {
+            if (data && data.Alumnos) {
+                db = data;
+                localStorage.setItem('escolas_db', JSON.stringify(db));
+                renderSection(currentSection || 'inicio');
+                console.log("Datos actualizados desde la nube");
+            }
+        })
+        .catch(err => console.log("Cargando desde copia local..."));
+});
 </script>
 </body>
 </html>
