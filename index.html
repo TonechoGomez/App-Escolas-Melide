@@ -1271,33 +1271,30 @@ function importarDatos(event) {
             const datos = JSON.parse(contenido);
 
             if (datos && typeof datos === 'object') {
-                if (confirm('¿Cargar estos datos del PC? Se sobrescribirá la información actual.')) {
+                if (confirm('¿Cargar datos do PC? Isto borrará o que hai agora.')) {
                     
-                    // 1. Transferimos los datos al objeto db
+                    // 1. Limpieza total de los datos actuales
                     db.Monitores = Array.isArray(datos.Monitores) ? datos.Monitores : [];
                     db.Actividades = Array.isArray(datos.Actividades) ? datos.Actividades : [];
                     db.Alumnos = Array.isArray(datos.Alumnos) ? datos.Alumnos : [];
                     db.Aulas = Array.isArray(datos.Aulas) ? datos.Aulas : db.Aulas;
                     
-                    // 2. Ajuste de teléfonos
-                    db.Alumnos.forEach(al => {
-                        if (!al.tlfs) al.tlfs = (al.phoneList) ? al.phoneList.join(' | ') : "";
-                    });
+                    // 2. Guardado físico en el navegador
+                    const dataString = JSON.stringify(db);
+                    localStorage.setItem('melide_db', dataString);
+                    localStorage.setItem('escolas_db', dataString);
 
-                    // 3. Guardamos con los DOS nombres para asegurar compatibilidad
-                    localStorage.setItem('melide_db', JSON.stringify(db));
-                    localStorage.setItem('escolas_db', JSON.stringify(db));
-
-                    // 4. Enviamos a la nube
+                    // 3. Envío forzado a Google
                     saveData(); 
                     
-                    alert('¡IMPORTACIÓN CORRECTA! Los datos se han guardado y enviado a la nube.');
-                    location.reload();
+                    alert('¡IMPORTACIÓN CORRECTA! A aplicación vaise reiniciar para mostrar os novos datos.');
+                    
+                    // 4. Forzar reinicio limpio
+                    window.location.href = window.location.pathname + "?v=" + Date.now();
                 }
             }
         } catch (err) {
-            console.error(err);
-            alert('ERROR: El archivo no es válido.');
+            alert('Erro ao procesar o arquivo: ' + err.message);
         }
     };
     reader.readAsText(file);
