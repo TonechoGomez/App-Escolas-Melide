@@ -1266,66 +1266,70 @@ function importarDatos(event) {
     const reader = new FileReader();
     reader.onload = function(e) {
         try {
-            let contenido = e.target.result.trim();
-            if (contenido.charCodeAt(0) === 0xFEFF) contenido = contenido.slice(1);
-            const datos = JSON.parse(contenido);
+            const datos = JSON.parse(e.target.result);
+            // Verificamos que el archivo tenga alumnos antes de hacer nada
+            const numAlumnos = (datos.Alumnos) ? datos.Alumnos.length : 0;
 
-            if (confirm('¿Cargar datos do PC? Isto sobrescribirá todo.')) {
-                // 1. Asignar datos (buscando mayúsculas o minúsculas)
-                db.Monitores = datos.Monitores || datos.monitores || [];
-                db.Actividades = datos.Actividades || datos.actividades || [];
-                db.Alumnos = datos.Alumnos || datos.alumnos || [];
-                db.Aulas = datos.Aulas || datos.aulas || db.Aulas;
+            if (confirm('¿Cargar ' + numAlumnos + ' alumnos e todos os datos do PC?')) {
+                // Forzamos la asignación total de la base de datos
+                db = datos;
+                
+                // Guardamos en la memoria del navegador inmediatamente
+                const databaseStr = JSON.stringify(db);
+                localStorage.setItem('melide_db', databaseStr);
+                localStorage.setItem('escolas_db', databaseStr);
 
-                // 2. Guardar en local inmediatamente
-                const str = JSON.stringify(db);
-                localStorage.setItem('melide_db', str);
-                localStorage.setItem('escolas_db', str);
-
-                // 3. ENVIAR A GOOGLE (con aviso de éxito)
+                // Intentamos subirlo a Google Sheets de una vez
                 if (typeof saveData === 'function') {
                     saveData();
                 }
 
-                alert('IMPORTACIÓN ÉXITOSA. Agora os datos subirán á nube.');
-                
-                // 4. Reinicio forzado
-                window.location.reload();
+                alert('ÉXITO: Cargados ' + numAlumnos + ' alumnos. A páxina vaise reiniciar para aplicar os cambios.');
+                location.reload();
             }
         } catch (err) {
-            alert('Erro: O archivo non é válido.');
+            console.error(err);
+            alert('Erro ao procesar o archivo JSON: ' + err.message);
         }
     };
     reader.readAsText(file);
 }
 
-// CARGA INTELIGENTE (Prioriza local si acabamos de importar)
+// CARGA INICIAL PROTEGIDA (Evita que la nube vacía borre tus datos)
 window.addEventListener('load', () => {
-    // 1. Cargamos lo que haya en el navegador primero
-    const localData = localStorage.getItem('melide_db') || localStorage.getItem('escolas_db');
-    if (localData) {
-        const parsed = JSON.parse(localData);
-        // Solo cargamos local si tiene contenido real
-        if (parsed.Monitores && parsed.Monitores.length > 0) {
-            Object.assign(db, parsed);
-            console.log("Cargados datos locales.");
+    // 1. Intentar cargar lo que hay en el navegador (lo que acabas de importar)
+    const local = localStorage.getItem('melide_db') || localStorage.getItem('escolas_db');
+    if (local) {
+        const parsed = JSON.parse(local);
+        if (parsed.Alumnos && parsed.Alumnos.length > 0) {
+            db = parsed; 
+            console.log("Datos locales cargados con éxito (" + db.Alumnos.length + " alumnos).");
         }
     }
 
-    // 2. Intentamos traer de la nube, pero SIN borrar si la nube está vacía
+    // 2. Consultar a la nube
     fetch(SCRIPT_URL + "?action=read")
         .then(response => response.json())
         .then(data => {
-            if (data && (data.Monitores && data.Monitores.length > 0)) {
-                Object.assign(db, data);
-                localStorage.setItem('melide_db', JSON.stringify(db));
-                console.log("Sincronizado con Google Sheets.");
+            // REGLA DE ORO: Solo aceptamos datos de la nube si tienen alumnos
+            // Esto evita que una nube vacía machaque tus 920 alumnos locales
+            if (data && data.Alumnos && data.Alumnos.length > 0) {
+                // Si la nube tiene más datos o los locales están vacíos, actualizamos
+                if (!db.Alumnos || db.Alumnos.length === 0 || data.Alumnos.length >= db.Alumnos.length) {
+                    db = data;
+                    localStorage.setItem('melide_db', JSON.stringify(db));
+                    console.log("Sincronizado con Google Sheets (Nube manda).");
+                }
             } else {
-                console.log("A nube está vacía, mantemos os datos locais.");
+                console.log("A nube está baleira. Mantemos os teus 920 alumnos locais.");
             }
+            
             if (typeof actualizarSelectoresLogin === "function") actualizarSelectoresLogin();
         })
-        .catch(err => console.log("Modo offline o error de red."));
+        .catch(err => {
+            console.warn("Modo offline o error de conexión:", err);
+            if (typeof actualizarSelectoresLogin === "function") actualizarSelectoresLogin();
+        });
 });
 </script>
 </body>
