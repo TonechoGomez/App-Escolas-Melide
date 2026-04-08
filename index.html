@@ -255,22 +255,62 @@ function repairDB() {
     });
     saveData();
 }
+// [01] GESTIÓN DE DATOS (REPARACIÓN, CARGA Y GUARDADO)
 repairDB();
 
+// Esta función descarga los datos de Google para que la App no esté vacía
+function cargarDatosDeNube() {
+    console.log("Sincronizando con Google Sheets...");
+    fetch(SCRIPT_URL + "?action=read")
+    .then(response => response.json())
+    .then(data => {
+        if (data) {
+            db.Monitores = data.Monitores || [];
+            db.Actividades = data.Actividades || [];
+            db.Aulas = data.Aulas || db.Aulas;
+            db.Alumnos = data.Alumnos || [];
+            
+            // Guardamos la copia en el navegador
+            localStorage.setItem('melide_db', JSON.stringify(db));
+            console.log("Datos cargados correctamente.");
+            
+            // Si hay monitores nuevos, los ponemos en el login
+            actualizarSelectoresLogin();
+        }
+    })
+    .catch(err => console.warn("Usando datos locales (Offline):", err));
+}
+
+// Llamamos a la carga nada más abrir el archivo
+cargarDatosDeNube();
+
 function saveData() {
-    localStorage.setItem('escolas_db', JSON.stringify(db));
+    localStorage.setItem('melide_db', JSON.stringify(db));
     fetch(SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
         body: JSON.stringify(db)
     })
-    .then(() => console.log("Sincronizado con la nube"))
-    .catch(err => console.error("Error al sincronizar:", err));
+    .then(() => console.log("Guardado en la nube"))
+    .catch(err => console.error("Error al guardar:", err));
+}
+
+function actualizarSelectoresLogin() {
+    const monitorSelect = document.getElementById('id-monitor-login');
+    if (monitorSelect) {
+        monitorSelect.innerHTML = '<option value="">Selecciona Monitor...</option>';
+        getSorted(db.Monitores).forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.nome;
+            opt.textContent = m.nome;
+            monitorSelect.appendChild(opt);
+        });
+    }
 }
 
 function closeModal() {
     document.getElementById('modal-overlay').classList.remove('active');
-    if(currentSection) filterCurrentData(); 
+    if(currentSection) renderSection(currentSection); 
 }
 
 function getSorted(array) { 
