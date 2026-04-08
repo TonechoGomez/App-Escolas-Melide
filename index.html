@@ -183,19 +183,25 @@
     <section id="scr-inicio" class="screen active">
         <div class="welcome-card">
             <h2 style="margin-top:0; color: var(--melide-primary); text-align: center;">Acceso Gestión</h2>
+            
             <label>Tipo de Usuario</label>
-            <select id="user-role" onchange="toggleMonitorLogin(this.value)">
+            <select id="userSelect" onchange="toggleMonitorLogin(this.value)">
                 <option value="tecnico">Técnico Municipal</option>
                 <option value="monitor">Monitor / Profesor</option>
+                <option value="concejal">Concejal</option>
             </select>
+
             <div id="login-monitor-area" style="display:none;">
                 <label>Seleccionar Monitor</label>
                 <select id="id-monitor-login"></select>
             </div>
+
+            <label style="margin-top:10px; display:block;">Contrasinal</label>
+            <input type="password" id="passInput" placeholder="Introduce a clave" style="width:100%; padding:10px; margin-bottom:15px; border-radius:4px; border:1px solid #ccc;">
+
             <button class="btn" onclick="login()">ENTRAR</button>
         </div>
     </section>
-
     <section id="scr-dash" class="screen">
         <div class="grid-menu" id="menu-container"></div>
         <button class="btn-logout" onclick="logout()">CERRAR SESIÓN</button>
@@ -290,9 +296,65 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwoJOBwrPMDuKUH5hCQG
 }
 
 function login() {
+    // 1. Capturamos los datos de la pantalla
     const user = document.getElementById('userSelect').value;
     const pass = document.getElementById('passInput').value;
     const monitorSelect = document.getElementById('id-monitor-login');
+
+    // 2. Comprobamos si la clave coincide con el perfil
+    if (user === 'tecnico' && pass === '1234') {
+        userRole = 'Tecnico';
+        monitorActivo = 'todos';
+    } else if (user === 'monitor' && pass === '4321') {
+        userRole = 'Monitor';
+        monitorActivo = monitorSelect ? monitorSelect.value : 'todos';
+    } else if (user === 'concejal' && pass === '0000') {
+        userRole = 'Concejal';
+        monitorActivo = 'todos';
+    } else {
+        alert("Contrasinal incorrecto");
+        return; // Si falla, nos detenemos aquí
+    }
+
+    // 3. Si llegamos aquí, la clave es buena. Cambiamos de pantalla.
+    // Ocultamos el login y mostramos la app (main-container o main-app según tu código)
+    document.getElementById('scr-inicio').classList.remove('active');
+    
+    // Mostramos el dashboard o menú principal
+    actualizarMenuPrincipal();
+    applyPermissions();
+    renderSection('inicio');
+    
+    console.log("Login exitoso como: " + userRole);
+}
+function actualizarMenuPrincipal() {
+    const menu = document.getElementById('menu-container');
+    if (!menu) return;
+    menu.innerHTML = '';
+
+    let tabs = [
+        {id: 'Monitores', icon: '👥'}, 
+        {id: 'Actividades', icon: '🏆'}, 
+        {id: 'Aulas', icon: '🏠'}, 
+        {id: 'Alumnos', icon: '🎓'}, 
+        {id: 'Horarios', icon: '🗓️'}
+    ];
+
+    if (userRole === 'Tecnico') {
+        tabs.push({id: 'Config', icon: '⚙️'});
+    }
+
+    tabs.forEach(tab => {
+        const card = document.createElement('div');
+        card.className = 'menu-card';
+        card.onclick = function() { renderSection(tab.id); };
+        card.innerHTML = `<div style="font-size:2.2rem">${tab.icon}</div><h3>${tab.id}</h3>`;
+        menu.appendChild(card);
+    });
+    
+    // Cambiamos a la vista de dashboard
+    nav('scr-dash'); 
+}
 
     // 1. Verificación de credenciales y asignación de Rol
     if (user === 'tecnico' && pass === '1234') {
