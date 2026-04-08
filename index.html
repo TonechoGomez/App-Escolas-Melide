@@ -1243,17 +1243,21 @@ function renderConfigView() {
     `;
 }
 function exportarDatos() {
-    const dataStr = JSON.stringify(db, null, 2);
-    const blob = new Blob([dataStr], {type: "application/json"});
-    const url = URL.createObjectURL(blob);
-    
-    const nombreArchivo = 'backup_escolas_' + new Date().toISOString().slice(0,10) + '.json';
-    const linkElement = document.createElement('a');
-    linkElement.href = url;
-    linkElement.download = nombreArchivo;
-    linkElement.click();
-    
-    setTimeout(() => URL.revokeObjectURL(url), 100);
+    try {
+        const dataStr = JSON.stringify(db, null, 2);
+        const blob = new Blob([dataStr], {type: "application/json"});
+        const url = URL.createObjectURL(blob);
+        
+        const nombreArchivo = 'backup_escolas_' + new Date().toISOString().slice(0,10) + '.json';
+        const linkElement = document.createElement('a');
+        linkElement.href = url;
+        linkElement.download = nombreArchivo;
+        linkElement.click();
+        
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+    } catch (err) {
+        alert("Error al exportar: " + err.message);
+    }
 }
 
 function importarDatos(event) {
@@ -1263,41 +1267,63 @@ function importarDatos(event) {
     reader.onload = function(e) {
         try {
             let contenido = e.target.result;
-            // Limpia caracteres invisibles que rompen el JSON
-            contenido = contenido.replace(/^\uFEFF/, ""); 
+            // Limpia el archivo de caracteres invisibles
+            contenido = contenido.replace(/^\uFEFF/, "").trim(); 
             const datos = JSON.parse(contenido);
+
             if (datos && typeof datos === 'object') {
-                if (confirm('¿Cargar estos datos?')) {
-                    db = datos;
-                    if(!db.Alumnos) db.Alumnos = [];
+                if (confirm('¿Cargar estos datos del PC? Se sobrescribirá la información actual.')) {
+                    
+                    // Transferimos los datos uno a uno para evitar errores de referencia
+                    db.Monitores = Array.isArray(datos.Monitores) ? datos.Monitores : [];
+                    db.Actividades = Array.isArray(datos.Actividades) ? datos.Actividades : [];
+                    db.Alumnos = Array.isArray(datos.Alumnos) ? datos.Alumnos : [];
+                    
+                    // Si el archivo viene de una versión vieja, ajustamos campos
                     db.Alumnos.forEach(al => {
-                        if (al.phoneList && Array.isArray(al.phoneList)) al.tlfs = al.phoneList.join(' | ');
-                        if (al.tlfs === undefined) al.tlfs = "";
+                        if (!al.tlfs) al.tlfs = (al.phoneList) ? al.phoneList.join(' | ') : "";
                     });
-                    saveData();
-                    alert('¡IMPORTACIÓN CORRECTA!');
+
+                    // Guardamos localmente y enviamos a la nube
+                    saveData(); 
+                    
+                    alert('¡IMPORTACIÓN CORRECTA! Los datos ya están sincronizados.');
                     location.reload();
                 }
             }
         } catch (err) {
-            alert('ERROR: El archivo no es válido o tiene un formato de texto incorrecto.');
+            console.error(err);
+            alert('ERROR: El archivo del PC no es válido. Asegúrate de que sea el .json que exportaste.');
         }
     };
     reader.readAsText(file);
 }
-// Sincronización inicial al abrir la App
+
+// Sincronización inteligente al abrir la App
 window.addEventListener('load', () => {
-    fetch(SCRIPT_URL)
+    console.log("Iniciando carga de datos...");
+    fetch(SCRIPT_URL + "?action=read")
         .then(response => response.json())
         .then(data => {
-            if (data && data.Alumnos) {
-                db = data;
+            if (data && (data.Alumnos || data.Monitores)) {
+                // Actualizamos la base de datos local con lo que hay en Google
+                Object.assign(db, data);
                 localStorage.setItem('escolas_db', JSON.stringify(db));
-                renderSection(currentSection || 'inicio');
-                console.log("Datos actualizados desde la nube");
+                console.log("Datos sincronizados desde la nube");
+                
+                // Si ya estamos logueados, refrescamos la vista
+                if (userRole) {
+                    actualizarMenuPrincipal();
+                    renderSection('inicio');
+                }
             }
         })
-        .catch(err => console.log("Cargando desde copia local..."));
+        .catch(err => {
+            console.log("Cargando desde copia local (Sin conexión)...");
+            // Si falla la nube, intentamos usar lo que ya está en el navegador
+            const localData = localStorage.getItem('escolas_db');
+            if (localData) Object.assign(db, JSON.parse(localData));
+        });
 });
 </script>
 </body>
