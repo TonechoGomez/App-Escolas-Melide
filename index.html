@@ -1268,61 +1268,74 @@ function importarDatos(event) {
         try {
             const datos = JSON.parse(e.target.result);
             
-            // MAPEO FORZADO: Buscamos los datos se llamen como se llamen
+            // RECONSTRUCCIÓN TOTAL (Aseguramos que no falte nada)
             db.Monitores = datos.Monitores || datos.monitores || [];
             db.Actividades = datos.Actividades || datos.actividades || [];
             db.Alumnos = datos.Alumnos || datos.alumnos || [];
             db.Aulas = datos.Aulas || datos.aulas || [];
 
-            const numAl = db.Alumnos.length;
-            const numMon = db.Monitores.length;
+            // Verificación de volumen de datos
+            const resumen = `
+                Alumnos: ${db.Alumnos.length}
+                Monitores: ${db.Monitores.length}
+                Actividades: ${db.Actividades.length}
+                Aulas: ${db.Aulas.length}
+            `;
 
-            if (confirm('¿Cargar ' + numAl + ' alumnos y ' + numMon + ' monitores?')) {
-                // Guardar con nombres estandarizados
-                const finalData = JSON.stringify(db);
-                localStorage.setItem('melide_db', finalData);
-                localStorage.setItem('escolas_db', finalData);
+            if (confirm('¿Confirmar importación total de datos?\n' + resumen)) {
+                // Guardado masivo en memoria local
+                const dbFinal = JSON.stringify(db);
+                localStorage.setItem('melide_db', dbFinal);
+                localStorage.setItem('escolas_db', dbFinal);
 
-                // Subida inmediata a la nube
-                if (typeof saveData === 'function') saveData();
+                // Forzamos el envío a Google Sheets inmediatamente
+                if (typeof saveData === 'function') {
+                    saveData();
+                }
 
-                alert('IMPORTACIÓN EXITOSA: ' + numAl + ' alumnos y ' + numMon + ' monitores listos.');
+                alert('DATOS RESTAURADOS COMPLETAMENTE.');
                 location.reload();
             }
         } catch (err) {
-            alert('Error crítico al importar: ' + err.message);
+            alert('Error al procesar el archivo: ' + err.message);
         }
     };
     reader.readAsText(file);
 }
 
 window.addEventListener('load', () => {
-    // 1. Recuperar datos de la memoria
+    // 1. Prioridad: Lo que hay en el PC (Memoria del navegador)
     const local = localStorage.getItem('melide_db') || localStorage.getItem('escolas_db');
     if (local) {
-        db = JSON.parse(local);
-        console.log("Datos cargados en memoria.");
+        const parsed = JSON.parse(local);
+        // Si hay alumnos o monitores, asumimos que es nuestra base de datos buena
+        if ((parsed.Alumnos && parsed.Alumnos.length > 0) || (parsed.Monitores && parsed.Monitores.length > 0)) {
+            db = parsed;
+        }
     }
 
-    // 2. FORZAR DIBUJO (Damos tiempo a que la web cargue sus funciones)
+    // 2. Dibujado de seguridad (esperamos un poco a que cargue la web)
     setTimeout(() => {
-        console.log("Dibujando tablas...");
         if (typeof actualizarSelectoresLogin === "function") actualizarSelectoresLogin();
         if (typeof actualizarTablaAlumnos === "function") actualizarTablaAlumnos();
         if (typeof actualizarTablaMonitores === "function") actualizarTablaMonitores();
         if (typeof actualizarTablaActividades === "function") actualizarTablaActividades();
-    }, 1000); // Un segundo de cortesía para que todo esté listo
+        if (typeof generarHorario === "function") generarHorario();
+    }, 1000);
 
-    // 3. Sincronizar con la nube (Solo si la nube tiene más datos que nosotros)
+    // 3. Sincronización con la nube (Solo si la nube NO está vacía)
     fetch(SCRIPT_URL + "?action=read")
         .then(res => res.json())
         .then(data => {
+            // REGLA DE SEGURIDAD: Solo aceptamos datos de la nube si traen más información que el PC
+            // Esto evita que una nube reseteada nos borre el trabajo
             if (data && data.Alumnos && data.Alumnos.length > (db.Alumnos ? db.Alumnos.length : 0)) {
                 db = data;
                 localStorage.setItem('melide_db', JSON.stringify(db));
                 location.reload();
             }
-        }).catch(e => console.log("Offline"));
+        })
+        .catch(e => console.log("Modo local (Offline)"));
 });
 </script>
 </body>
