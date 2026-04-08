@@ -1266,66 +1266,66 @@ function importarDatos(event) {
     const reader = new FileReader();
     reader.onload = function(e) {
         try {
-            let contenido = e.target.result;
-            contenido = contenido.replace(/^\uFEFF/, "").trim(); 
+            let contenido = e.target.result.trim();
+            if (contenido.charCodeAt(0) === 0xFEFF) contenido = contenido.slice(1);
             const datos = JSON.parse(contenido);
 
-            if (datos && typeof datos === 'object') {
-                if (confirm('¿Cargar datos do PC? Isto borrará o que hai agora.')) {
-                    
-                    // 1. Limpieza total de los datos actuales
-                    db.Monitores = Array.isArray(datos.Monitores) ? datos.Monitores : [];
-                    db.Actividades = Array.isArray(datos.Actividades) ? datos.Actividades : [];
-                    db.Alumnos = Array.isArray(datos.Alumnos) ? datos.Alumnos : [];
-                    db.Aulas = Array.isArray(datos.Aulas) ? datos.Aulas : db.Aulas;
-                    
-                    // 2. Guardado físico en el navegador
-                    const dataString = JSON.stringify(db);
-                    localStorage.setItem('melide_db', dataString);
-                    localStorage.setItem('escolas_db', dataString);
+            if (confirm('¿Cargar datos do PC? Isto sobrescribirá todo.')) {
+                // 1. Asignar datos (buscando mayúsculas o minúsculas)
+                db.Monitores = datos.Monitores || datos.monitores || [];
+                db.Actividades = datos.Actividades || datos.actividades || [];
+                db.Alumnos = datos.Alumnos || datos.alumnos || [];
+                db.Aulas = datos.Aulas || datos.aulas || db.Aulas;
 
-                    // 3. Envío forzado a Google
-                    saveData(); 
-                    
-                    alert('¡IMPORTACIÓN CORRECTA! A aplicación vaise reiniciar para mostrar os novos datos.');
-                    
-                    // 4. Forzar reinicio limpio
-                    window.location.href = window.location.pathname + "?v=" + Date.now();
+                // 2. Guardar en local inmediatamente
+                const str = JSON.stringify(db);
+                localStorage.setItem('melide_db', str);
+                localStorage.setItem('escolas_db', str);
+
+                // 3. ENVIAR A GOOGLE (con aviso de éxito)
+                if (typeof saveData === 'function') {
+                    saveData();
                 }
+
+                alert('IMPORTACIÓN ÉXITOSA. Agora os datos subirán á nube.');
+                
+                // 4. Reinicio forzado
+                window.location.reload();
             }
         } catch (err) {
-            alert('Erro ao procesar o arquivo: ' + err.message);
+            alert('Erro: O archivo non é válido.');
         }
     };
     reader.readAsText(file);
 }
 
-// Sincronización inteligente al abrir la App
+// CARGA INTELIGENTE (Prioriza local si acabamos de importar)
 window.addEventListener('load', () => {
-    console.log("Iniciando carga de datos...");
-    
-    // Primero intentamos cargar lo que haya en el navegador (Local) para que no salga vacía
+    // 1. Cargamos lo que haya en el navegador primero
     const localData = localStorage.getItem('melide_db') || localStorage.getItem('escolas_db');
     if (localData) {
-        Object.assign(db, JSON.parse(localData));
-        console.log("Datos locales cargados.");
+        const parsed = JSON.parse(localData);
+        // Solo cargamos local si tiene contenido real
+        if (parsed.Monitores && parsed.Monitores.length > 0) {
+            Object.assign(db, parsed);
+            console.log("Cargados datos locales.");
+        }
     }
 
-    // Luego intentamos actualizar desde Google (Nube)
+    // 2. Intentamos traer de la nube, pero SIN borrar si la nube está vacía
     fetch(SCRIPT_URL + "?action=read")
         .then(response => response.json())
         .then(data => {
-            if (data && (data.Alumnos || data.Monitores)) {
+            if (data && (data.Monitores && data.Monitores.length > 0)) {
                 Object.assign(db, data);
                 localStorage.setItem('melide_db', JSON.stringify(db));
-                localStorage.setItem('escolas_db', JSON.stringify(db));
-                console.log("Datos actualizados desde la nube");
-                
-                // Si el usuario ya entró, refrescamos los selectores
-                if (typeof actualizarSelectoresLogin === "function") actualizarSelectoresLogin();
+                console.log("Sincronizado con Google Sheets.");
+            } else {
+                console.log("A nube está vacía, mantemos os datos locais.");
             }
+            if (typeof actualizarSelectoresLogin === "function") actualizarSelectoresLogin();
         })
-        .catch(err => console.log("Trabajando en modo local (Nube no disponible)"));
+        .catch(err => console.log("Modo offline o error de red."));
 });
 </script>
 </body>
