@@ -1268,25 +1268,21 @@ function importarDatos(event) {
         try {
             const datos = JSON.parse(e.target.result);
             
-            // MAPEO TOTAL: Obligamos a la web a reconocer cada cajón de datos
+            // Unificamos datos (Mayúsculas/Minúsculas)
             db.Monitores = datos.Monitores || datos.monitores || [];
             db.Actividades = datos.Actividades || datos.actividades || [];
             db.Alumnos = datos.Alumnos || datos.alumnos || [];
             db.Aulas = datos.Aulas || datos.aulas || [];
 
-            if (confirm('¿Cargar ' + db.Alumnos.length + ' alumnos, ' + db.Monitores.length + ' monitores y aulas?')) {
-                // Guardamos en la memoria del navegador
+            if (confirm('¿Cargar ' + db.Alumnos.length + ' alumnos y todos los datos?')) {
                 const dbStr = JSON.stringify(db);
                 localStorage.setItem('melide_db', dbStr);
                 localStorage.setItem('escolas_db', dbStr);
 
-                // Forzamos el dibujo de TODO antes de que la página haga nada más
-                alert('IMPORTACIÓN EXITOSA. Los datos se están guardando...');
-                
-                // Intentamos subir a la nube
+                // Intentamos subir a la nube si la función existe
                 if (typeof saveData === 'function') saveData();
 
-                // Recarga limpia
+                alert('IMPORTACIÓN EXITOSA. Reiniciando para mostrar los datos...');
                 location.reload();
             }
         } catch (err) {
@@ -1297,38 +1293,43 @@ function importarDatos(event) {
 }
 
 window.addEventListener('load', () => {
-    // 1. CARGA INICIAL: Prioridad absoluta a lo que acabas de importar
+    // 1. CARGA INICIAL
     const local = localStorage.getItem('melide_db') || localStorage.getItem('escolas_db');
     if (local) {
         const parsed = JSON.parse(local);
         if (parsed.Alumnos && parsed.Alumnos.length > 0) {
             db = parsed;
-            console.log("Datos locales recuperados: " + db.Alumnos.length + " alumnos.");
         }
     }
 
-    // 2. DIBUJADO FORZADO: Esperamos 1 segundo para asegurar que la web cargó
+    // 2. DIBUJADO SEGURO (Solo llama a las funciones SI EXISTEN en tu código)
     setTimeout(() => {
-        console.log("Ejecutando dibujado de tablas...");
         if (typeof actualizarSelectoresLogin === "function") actualizarSelectoresLogin();
         if (typeof actualizarTablaAlumnos === "function") actualizarTablaAlumnos();
-        if (typeof actualizarTablaMonitores === "function") actualizarTablaMonitores();
+        
+        // Si tienes monitores pero la función se llama diferente, aquí la protegemos:
+        if (typeof actualizarTablaMonitores === "function") {
+            actualizarTablaMonitores();
+        } else if (typeof actualizarMonitores === "function") {
+            actualizarMonitores();
+        }
+
         if (typeof actualizarTablaActividades === "function") actualizarTablaActividades();
         if (typeof generarHorario === "function") generarHorario();
-    }, 1000);
+    }, 1200);
 
-    // 3. NUBE: Solo si tiene MÁS datos que nosotros, actualizamos
-    if (typeof SCRIPT_URL !== 'undefined') {
+    // 3. NUBE
+    if (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) {
         fetch(SCRIPT_URL + "?action=read")
             .then(res => res.json())
             .then(data => {
-                const localCount = db.Alumnos ? db.Alumnos.length : 0;
+                const localCount = (db.Alumnos) ? db.Alumnos.length : 0;
                 if (data && data.Alumnos && data.Alumnos.length > localCount) {
                     db = data;
                     localStorage.setItem('melide_db', JSON.stringify(db));
                     location.reload();
                 }
-            }).catch(e => console.warn("Modo local activo"));
+            }).catch(e => console.log("Modo local"));
     }
 });
 </script>
