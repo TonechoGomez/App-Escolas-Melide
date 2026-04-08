@@ -1267,33 +1267,37 @@ function importarDatos(event) {
     reader.onload = function(e) {
         try {
             let contenido = e.target.result;
-            // Limpia el archivo de caracteres invisibles
             contenido = contenido.replace(/^\uFEFF/, "").trim(); 
             const datos = JSON.parse(contenido);
 
             if (datos && typeof datos === 'object') {
                 if (confirm('¿Cargar estos datos del PC? Se sobrescribirá la información actual.')) {
                     
-                    // Transferimos los datos uno a uno para evitar errores de referencia
+                    // 1. Transferimos los datos al objeto db
                     db.Monitores = Array.isArray(datos.Monitores) ? datos.Monitores : [];
                     db.Actividades = Array.isArray(datos.Actividades) ? datos.Actividades : [];
                     db.Alumnos = Array.isArray(datos.Alumnos) ? datos.Alumnos : [];
+                    db.Aulas = Array.isArray(datos.Aulas) ? datos.Aulas : db.Aulas;
                     
-                    // Si el archivo viene de una versión vieja, ajustamos campos
+                    // 2. Ajuste de teléfonos
                     db.Alumnos.forEach(al => {
                         if (!al.tlfs) al.tlfs = (al.phoneList) ? al.phoneList.join(' | ') : "";
                     });
 
-                    // Guardamos localmente y enviamos a la nube
+                    // 3. Guardamos con los DOS nombres para asegurar compatibilidad
+                    localStorage.setItem('melide_db', JSON.stringify(db));
+                    localStorage.setItem('escolas_db', JSON.stringify(db));
+
+                    // 4. Enviamos a la nube
                     saveData(); 
                     
-                    alert('¡IMPORTACIÓN CORRECTA! Los datos ya están sincronizados.');
+                    alert('¡IMPORTACIÓN CORRECTA! Los datos se han guardado y enviado a la nube.');
                     location.reload();
                 }
             }
         } catch (err) {
             console.error(err);
-            alert('ERROR: El archivo del PC no es válido. Asegúrate de que sea el .json que exportaste.');
+            alert('ERROR: El archivo no es válido.');
         }
     };
     reader.readAsText(file);
@@ -1302,28 +1306,29 @@ function importarDatos(event) {
 // Sincronización inteligente al abrir la App
 window.addEventListener('load', () => {
     console.log("Iniciando carga de datos...");
+    
+    // Primero intentamos cargar lo que haya en el navegador (Local) para que no salga vacía
+    const localData = localStorage.getItem('melide_db') || localStorage.getItem('escolas_db');
+    if (localData) {
+        Object.assign(db, JSON.parse(localData));
+        console.log("Datos locales cargados.");
+    }
+
+    // Luego intentamos actualizar desde Google (Nube)
     fetch(SCRIPT_URL + "?action=read")
         .then(response => response.json())
         .then(data => {
             if (data && (data.Alumnos || data.Monitores)) {
-                // Actualizamos la base de datos local con lo que hay en Google
                 Object.assign(db, data);
+                localStorage.setItem('melide_db', JSON.stringify(db));
                 localStorage.setItem('escolas_db', JSON.stringify(db));
-                console.log("Datos sincronizados desde la nube");
+                console.log("Datos actualizados desde la nube");
                 
-                // Si ya estamos logueados, refrescamos la vista
-                if (userRole) {
-                    actualizarMenuPrincipal();
-                    renderSection('inicio');
-                }
+                // Si el usuario ya entró, refrescamos los selectores
+                if (typeof actualizarSelectoresLogin === "function") actualizarSelectoresLogin();
             }
         })
-        .catch(err => {
-            console.log("Cargando desde copia local (Sin conexión)...");
-            // Si falla la nube, intentamos usar lo que ya está en el navegador
-            const localData = localStorage.getItem('escolas_db');
-            if (localData) Object.assign(db, JSON.parse(localData));
-        });
+        .catch(err => console.log("Trabajando en modo local (Nube no disponible)"));
 });
 </script>
 </body>
