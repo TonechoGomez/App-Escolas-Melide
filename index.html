@@ -1267,70 +1267,64 @@ function importarDatos(event) {
     reader.onload = function(e) {
         try {
             const datos = JSON.parse(e.target.result);
-            const numAlumnos = (datos.Alumnos) ? datos.Alumnos.length : 0;
+            
+            if (confirm('¿Confirmar carga total de datos?')) {
+                // Aseguramos que todas las categorías existan con el nombre correcto
+                db.Monitores = datos.Monitores || datos.monitores || [];
+                db.Actividades = datos.Actividades || datos.actividades || [];
+                db.Alumnos = datos.Alumnos || datos.alumnos || [];
+                db.Aulas = datos.Aulas || datos.aulas || [];
 
-            if (confirm('¿Cargar ' + numAlumnos + ' alumnos e todos os datos do PC?')) {
-                // 1. Guardar en la variable global
-                db = datos;
+                // Guardamos en el navegador (doble nombre por seguridad)
+                const dbStr = JSON.stringify(db);
+                localStorage.setItem('melide_db', dbStr);
+                localStorage.setItem('escolas_db', dbStr);
+
+                // Subimos a la nube
+                if (typeof saveData === 'function') saveData();
+
+                alert('Cargados: ' + db.Alumnos.length + ' alumnos y ' + db.Monitores.length + ' monitores.');
                 
-                // 2. Guardar en la memoria del navegador (Persistencia)
-                const dbString = JSON.stringify(db);
-                localStorage.setItem('melide_db', dbString);
-                localStorage.setItem('escolas_db', dbString);
-
-                // 3. Ordenar a la web que DIBUJE las tablas con los nuevos datos
+                // Forzamos actualización visual antes de recargar
                 if (typeof actualizarSelectoresLogin === "function") actualizarSelectoresLogin();
-                if (typeof actualizarTablaAlumnos === "function") actualizarTablaAlumnos();
-                if (typeof actualizarTablaMonitores === "function") actualizarTablaMonitores();
-                if (typeof actualizarTablaActividades === "function") actualizarTablaActividades();
-
-                // 4. Intentar subirlo a Google Sheets
-                if (typeof saveData === 'function') {
-                    saveData();
-                }
-
-                alert('ÉXITO: ' + numAlumnos + ' alumnos cargados. A páxina vaise reiniciar.');
                 location.reload();
             }
         } catch (err) {
-            alert('Erro: ' + err.message);
+            alert('Error en el archivo: ' + err.message);
         }
     };
     reader.readAsText(file);
 }
 
-// CARGA AL INICIAR LA WEB (Evita que la nube borre lo importado)
 window.addEventListener('load', () => {
-    // Recuperar datos de la memoria local
     const local = localStorage.getItem('melide_db') || localStorage.getItem('escolas_db');
     if (local) {
         const parsed = JSON.parse(local);
+        // Comprobamos que tenga contenido antes de asignar
         if (parsed.Alumnos && parsed.Alumnos.length > 0) {
             db = parsed;
-            // Forzar dibujado con un pequeño retraso para que la web esté lista
-            setTimeout(() => {
-                if (typeof actualizarSelectoresLogin === "function") actualizarSelectoresLogin();
-                if (typeof actualizarTablaAlumnos === "function") actualizarTablaAlumnos();
-                console.log("Interfaz dibujada con datos locales.");
-            }, 500); 
         }
     }
 
-    // Consultar a la nube
+    // Dibujado inicial
+    setTimeout(() => {
+        if (typeof actualizarSelectoresLogin === "function") actualizarSelectoresLogin();
+        // Forzamos el dibujo de todas las secciones
+        if (typeof actualizarTablaAlumnos === "function") actualizarTablaAlumnos();
+        if (typeof actualizarTablaMonitores === "function") actualizarTablaMonitores();
+    }, 800);
+
     fetch(SCRIPT_URL + "?action=read")
         .then(response => response.json())
         .then(data => {
-            // Solo aceptamos la nube si trae datos reales (no vacíos)
-            if (data && data.Alumnos && data.Alumnos.length > 0) {
-                // Si la nube tiene más alumnos que lo local, actualizamos
-                if (!db.Alumnos || data.Alumnos.length > db.Alumnos.length) {
-                    db = data;
-                    localStorage.setItem('melide_db', JSON.stringify(db));
-                    location.reload();
-                }
+            // Solo actualizamos desde la nube si ésta tiene MÁS datos que el PC
+            if (data && data.Alumnos && data.Alumnos.length > (db.Alumnos ? db.Alumnos.length : 0)) {
+                db = data;
+                localStorage.setItem('melide_db', JSON.stringify(db));
+                location.reload();
             }
         })
-        .catch(err => console.log("Modo local activo."));
+        .catch(err => console.log("Modo local habilitado"));
 });
 </script>
 </body>
