@@ -296,12 +296,13 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwoJOBwrPMDuKUH5hCQG
 }
 
 function login() {
-    // 1. Capturamos los datos de la pantalla
+    console.log("Iniciando proceso de login...");
+    
     const user = document.getElementById('userSelect').value;
     const pass = document.getElementById('passInput').value;
     const monitorSelect = document.getElementById('id-monitor-login');
 
-    // 2. Comprobamos si la clave coincide con el perfil
+    // 1. Verificación de credenciales
     if (user === 'tecnico' && pass === '1234') {
         userRole = 'Tecnico';
         monitorActivo = 'todos';
@@ -313,19 +314,32 @@ function login() {
         monitorActivo = 'todos';
     } else {
         alert("Contrasinal incorrecto");
-        return; // Si falla, nos detenemos aquí
+        return;
     }
 
-    // 3. Si llegamos aquí, la clave es buena. Cambiamos de pantalla.
-    // Ocultamos el login y mostramos la app (main-container o main-app según tu código)
-    document.getElementById('scr-inicio').classList.remove('active');
-    
-    // Mostramos el dashboard o menú principal
+    // 2. ACCIÓN DE ENTRADA: Forzamos el cambio visual
+    // Ocultamos la pantalla de inicio (el login)
+    const inicio = document.getElementById('scr-inicio');
+    if (inicio) {
+        inicio.style.display = 'none';
+        inicio.classList.remove('active');
+    }
+
+    // 3. Mostramos el contenedor principal de la App
+    const mainApp = document.getElementById('main-app') || document.getElementById('main-container');
+    if (mainApp) {
+        mainApp.style.display = 'block';
+        mainApp.classList.add('active');
+    }
+
+    // 4. Actualizamos el contenido según el rol
     actualizarMenuPrincipal();
-    applyPermissions();
-    renderSection('inicio');
     
-    console.log("Login exitoso como: " + userRole);
+    if (typeof applyPermissions === "function") applyPermissions();
+    if (typeof renderSection === "function") renderSection('inicio');
+    if (typeof nav === "function") nav('scr-dash');
+
+    console.log("Entrada confirmada como " + userRole);
 }
 function actualizarMenuPrincipal() {
     const menu = document.getElementById('menu-container');
