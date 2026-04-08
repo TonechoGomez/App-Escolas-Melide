@@ -233,15 +233,18 @@ let userRole = '';
 const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Lunes-Miércoles", "Martes-Jueves"];
 
 // 1. DEFINICIÓN INICIAL (Baleira para que non dea erro)
-let db = {
-    Monitores: [],
-    Actividades: [],
-    Alumnos: [],
-    Aulas: [],
-    Instalaciones: [],
-    Inscripciones: [],
-    Asistencia: {}
-};
+// --- BLOQUE DE DATOS BLINDADO ---
+let db = { Monitores: [], Actividades: [], Alumnos: [], Aulas: [], Instalaciones: [] };
+
+// Intentar recuperar del PC antes que de cualquier otro sitio
+const datosLocales = localStorage.getItem('melide_db') || localStorage.getItem('escolas_db');
+if (datosLocales) {
+    const parsed = JSON.parse(datosLocales);
+    if (parsed.Alumnos && parsed.Alumnos.length > 0) {
+        db = parsed;
+        console.log("Memoria local cargada con éxito: " + db.Alumnos.length + " alumnos.");
+    }
+}
 
 // 2. CARGA DE MEMORIA (Recupera os 920 alumnos e as aulas do JSON)
 try {
@@ -300,7 +303,7 @@ function cargarDatosDeNube() {
 }
 
 // Llamamos a la carga nada más abrir el archivo
-cargarDatosDeNube();
+//cargarDatosDeNube();
 
 function saveData() {
     localStorage.setItem('melide_db', JSON.stringify(db));
@@ -1322,52 +1325,64 @@ function importarDatos(event) {
 }
 
 window.addEventListener('load', () => {
-    // Intentamos recuperar de cualquier "cajón" de la memoria
-    const nombresCajones = ['melide_db', 'escolas_db', 'db_gestion'];
-    let datosRecuperados = null;
-
-    for (let nombre of nombresCajones) {
-        const item = localStorage.getItem(nombre);
-        if (item) {
-            const temp = JSON.parse(item);
-            if (temp.Alumnos && temp.Alumnos.length > 0) {
-                datosRecuperados = temp;
-                break; 
-            }
+    // 1. Aseguramos que la variable db tenga los datos del localStorage
+    const local = localStorage.getItem('melide_db') || localStorage.getItem('escolas_db');
+    if (local) {
+        const dataLocal = JSON.parse(local);
+        if (dataLocal.Alumnos && dataLocal.Alumnos.length > 0) {
+            db = dataLocal;
         }
     }
 
-    if (datosRecuperados) {
-        db = datosRecuperados;
-        console.log("Datos recuperados con éxito: " + db.Alumnos.length);
-    }
-
-    // Dibujado forzado con reintentos
-    const intentarDibujar = () => {
+    // 2. Función para forzar el dibujo de todas las pantallas
+    const forzarDibujo = () => {
         if (typeof actualizarSelectoresLogin === "function") actualizarSelectoresLogin();
-        if (typeof actualizarTablaAlumnos === "function") actualizarTablaAlumnos();
-        if (typeof actualizarTablaMonitores === "function") actualizarTablaMonitores();
-        if (typeof actualizarTablaActividades === "function") actualizarTablaActividades();
-        if (typeof generarHorario === "function") generarHorario();
+        // El buscador filterCurrentData() es el que realmente dibuja los alumnos en tu código
+        if (currentSection) renderSection(currentSection); 
     };
 
-    setTimeout(intentarDibujar, 500);
-    setTimeout(intentarDibujar, 2000); // Segundo intento por si el primero falló
-
-    // Sincronización con la nube (Solo si la nube tiene más datos que nosotros)
-    if (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) {
-        fetch(SCRIPT_URL + "?action=read")
-            .then(res => res.json())
-            .then(data => {
-                const actualAlumnos = (db.Alumnos) ? db.Alumnos.length : 0;
-                if (data && data.Alumnos && data.Alumnos.length > actualAlumnos) {
-                    db = data;
-                    localStorage.setItem('melide_db', JSON.stringify(db));
-                    intentarDibujar();
-                }
-            }).catch(e => console.log("Modo local"));
-    }
+    // Tres intentos de dibujado por si la web tarda en cargar
+    setTimeout(forzarDibujo, 200);
+    setTimeout(forzarDibujo, 1000);
+    
+    console.log("Sistema listo. Alumnos en memoria: " + (db.Alumnos ? db.Alumnos.length : 0));
 });
+
+// Función de importación corregida para que no se pierda nada
+function importarDatos(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const datos = JSON.parse(e.target.result);
+            const nuevaDB = {
+                Monitores: datos.Monitores || datos.monitores || [],
+                Actividades: datos.Actividades || datos.actividades || [],
+                Alumnos: datos.Alumnos || datos.alumnos || [],
+                Aulas: datos.Aulas || datos.aulas || []
+            };
+
+            if (confirm('¿Cargar ' + nuevaDB.Alumnos.length + ' alumnos?')) {
+                // Guardamos en todos los nombres posibles
+                const txt = JSON.stringify(nuevaDB);
+                localStorage.setItem('melide_db', txt);
+                localStorage.setItem('escolas_db', txt);
+                db = nuevaDB;
+
+                alert('DATOS GUARDADOS. Pulsa Aceptar para recargar.');
+                
+                // Intentamos subir a la nube para que no se pierdan
+                if (typeof saveData === 'function') saveData();
+                
+                setTimeout(() => { location.reload(); }, 500);
+            }
+        } catch (err) {
+            alert('Error al leer el archivo JSON');
+        }
+    };
+    reader.readAsText(file);
+}
 </script>
 </body>
 </html>
