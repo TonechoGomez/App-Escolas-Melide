@@ -232,12 +232,30 @@ let currentView = 'scr-inicio';
 let userRole = ''; 
 const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Lunes-Miércoles", "Martes-Jueves"];
 
-let db = JSON.parse(localStorage.getItem('melide_db')) || { 
-    Monitores: [], 
-    Aulas: [{nome: 'PARROQUIAS', espacios:["MACEDA", "FURELOS", "MOLDES", "GROBAS", "SANTALLA", "SAN MARTIÑO", "SAN SALVADOR"]}], 
-    Actividades: [], 
-    Alumnos: [] 
+// 1. DEFINICIÓN INICIAL (Baleira para que non dea erro)
+let db = {
+    Monitores: [],
+    Actividades: [],
+    Alumnos: [],
+    Aulas: [],
+    Instalaciones: [],
+    Inscripciones: [],
+    Asistencia: {}
 };
+
+// 2. CARGA DE MEMORIA (Recupera os 920 alumnos e as aulas do JSON)
+try {
+    const almacenado = localStorage.getItem('melide_db') || localStorage.getItem('escolas_db');
+    if (almacenado) {
+        const datosRecuperados = JSON.parse(almacenado);
+        if (datosRecuperados.Alumnos && datosRecuperados.Alumnos.length > 0) {
+            db = datosRecuperados;
+            console.log("Datos recuperados: " + db.Alumnos.length + " alumnos.");
+        }
+    }
+} catch (error) {
+    console.error("Erro na carga inicial:", error);
+}
 
 // AUTO-REPARACIÓN DE DATOS
 function repairDB() {
