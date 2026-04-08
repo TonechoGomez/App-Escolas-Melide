@@ -1324,8 +1324,9 @@ function importarDatos(event) {
     reader.readAsText(file);
 }
 
+
 window.addEventListener('load', () => {
-    // 1. Aseguramos que la variable db tenga los datos del localStorage
+    // 1. Primero intentamos cargar lo que haya en este dispositivo (Memoria local)
     const local = localStorage.getItem('melide_db') || localStorage.getItem('escolas_db');
     if (local) {
         const dataLocal = JSON.parse(local);
@@ -1334,55 +1335,41 @@ window.addEventListener('load', () => {
         }
     }
 
-    // 2. Función para forzar el dibujo de todas las pantallas
+    // 2. FUNCIÓN DE DIBUJADO (La ejecutamos ahora y también cuando responda la nube)
     const forzarDibujo = () => {
         if (typeof actualizarSelectoresLogin === "function") actualizarSelectoresLogin();
-        // El buscador filterCurrentData() es el que realmente dibuja los alumnos en tu código
         if (currentSection) renderSection(currentSection); 
     };
-
-    // Tres intentos de dibujado por si la web tarda en cargar
-    setTimeout(forzarDibujo, 200);
-    setTimeout(forzarDibujo, 1000);
     
-    console.log("Sistema listo. Alumnos en memoria: " + (db.Alumnos ? db.Alumnos.length : 0));
+    // Dibujo inicial con lo que tengamos (o vacío si es dispositivo nuevo)
+    setTimeout(forzarDibujo, 200);
+
+    // 3. LA PIEZA CLAVE: Si hay URL de Google, pedimos los datos actualizados
+    if (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL !== "") {
+        console.log("Sincronizando con la nube...");
+        fetch(SCRIPT_URL + "?action=read")
+            .then(res => res.json())
+            .then(data => {
+                // Si la nube tiene datos reales...
+                if (data && data.Alumnos && data.Alumnos.length > 0) {
+                    const localCount = (db.Alumnos) ? db.Alumnos.length : 0;
+                    
+                    // Si el dispositivo está vacío o la nube tiene más alumnos, actualizamos
+                    if (data.Alumnos.length >= localCount) {
+                        db = data;
+                        localStorage.setItem('melide_db', JSON.stringify(db));
+                        localStorage.setItem('escolas_db', JSON.stringify(db));
+                        forzarDibujo(); // Repintamos con los datos nuevos de la nube
+                        console.log("Datos descargados de la nube: " + db.Alumnos.length + " alumnos.");
+                    }
+                }
+            })
+            .catch(err => console.log("Trabajando en modo local/offline."));
+    }
+
+    setTimeout(forzarDibujo, 1000);
+    console.log("Sistema listo. Estado inicial: " + (db.Alumnos ? db.Alumnos.length : 0) + " alumnos.");
 });
-
-// Función de importación corregida para que no se pierda nada
-function importarDatos(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const datos = JSON.parse(e.target.result);
-            const nuevaDB = {
-                Monitores: datos.Monitores || datos.monitores || [],
-                Actividades: datos.Actividades || datos.actividades || [],
-                Alumnos: datos.Alumnos || datos.alumnos || [],
-                Aulas: datos.Aulas || datos.aulas || []
-            };
-
-            if (confirm('¿Cargar ' + nuevaDB.Alumnos.length + ' alumnos?')) {
-                // Guardamos en todos los nombres posibles
-                const txt = JSON.stringify(nuevaDB);
-                localStorage.setItem('melide_db', txt);
-                localStorage.setItem('escolas_db', txt);
-                db = nuevaDB;
-
-                alert('DATOS GUARDADOS. Pulsa Aceptar para recargar.');
-                
-                // Intentamos subir a la nube para que no se pierdan
-                if (typeof saveData === 'function') saveData();
-                
-                setTimeout(() => { location.reload(); }, 500);
-            }
-        } catch (err) {
-            alert('Error al leer el archivo JSON');
-        }
-    };
-    reader.readAsText(file);
-}
 </script>
 </body>
 </html>
