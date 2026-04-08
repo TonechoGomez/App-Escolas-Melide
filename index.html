@@ -1268,82 +1268,86 @@ function importarDatos(event) {
         try {
             const datos = JSON.parse(e.target.result);
             
-            // 1. Verificación y Limpieza: Creamos un objeto nuevo con la estructura correcta
-            const nuevoDb = {
+            // Forzamos la estructura en un objeto limpio
+            const estructuraNueva = {
                 Monitores: datos.Monitores || datos.monitores || [],
                 Actividades: datos.Actividades || datos.actividades || [],
                 Alumnos: datos.Alumnos || datos.alumnos || [],
                 Aulas: datos.Aulas || datos.aulas || []
             };
 
-            const numAlumnos = nuevoDb.Alumnos.length;
+            if (confirm('¿Cargar ' + estructuraNueva.Alumnos.length + ' alumnos y todos los datos?')) {
+                // PASO CRÍTICO: Guardamos con todos los nombres posibles para evitar conflictos
+                const stringDatos = JSON.stringify(estructuraNueva);
+                localStorage.setItem('melide_db', stringDatos);
+                localStorage.setItem('escolas_db', stringDatos);
+                localStorage.setItem('db_gestion', stringDatos); // Un tercer nombre de respaldo
 
-            if (confirm('¿Cargar ' + numAlumnos + ' alumnos y todos los datos del PC?')) {
-                // 2. Asignación Global: Esto es lo que faltaba para que las tablas no salgan vacías
-                db = nuevoDb;
+                // Aplicamos a la variable viva del programa
+                db = estructuraNueva;
 
-                // 3. Guardado en Memoria del Navegador
-                const dbStr = JSON.stringify(db);
-                localStorage.setItem('melide_db', dbStr);
-                localStorage.setItem('escolas_db', dbStr);
+                alert('¡DATOS GRABADOS EN EL NAVEGADOR! Ahora se enviarán a la nube.');
 
-                // 4. Sincronización forzada con Google antes de recargar
+                // Intentamos subir a Google Sheets
                 if (typeof saveData === 'function') {
                     saveData();
-                    alert('IMPORTACIÓN EXITOSA. Enviando ' + numAlumnos + ' alumnos a la nube...');
-                } else {
-                    alert('IMPORTACIÓN EXITOSA localmente.');
                 }
 
-                // 5. Recarga para limpiar cualquier error visual previo
-                setTimeout(() => { location.reload(); }, 1500);
+                // Esperamos un segundo para que el navegador asiente los datos y reiniciamos
+                setTimeout(() => { location.reload(); }, 1000);
             }
         } catch (err) {
-            alert('Error crítico al importar: ' + err.message);
+            alert('Error al procesar el archivo: ' + err.message);
         }
     };
     reader.readAsText(file);
 }
 
 window.addEventListener('load', () => {
-    // 1. Intentar recuperar datos del PC (Memoria local)
-    const local = localStorage.getItem('melide_db') || localStorage.getItem('escolas_db');
-    if (local) {
-        const parsed = JSON.parse(local);
-        // Solo cargamos si tiene datos reales
-        if (parsed.Alumnos && parsed.Alumnos.length > 0) {
-            db = parsed;
-            console.log("Sistema cargado con " + db.Alumnos.length + " alumnos.");
+    // Intentamos recuperar de cualquier "cajón" de la memoria
+    const nombresCajones = ['melide_db', 'escolas_db', 'db_gestion'];
+    let datosRecuperados = null;
+
+    for (let nombre of nombresCajones) {
+        const item = localStorage.getItem(nombre);
+        if (item) {
+            const temp = JSON.parse(item);
+            if (temp.Alumnos && temp.Alumnos.length > 0) {
+                datosRecuperados = temp;
+                break; 
+            }
         }
     }
 
-    // 2. DIBUJADO DINÁMICO (Con tiempos de espera para archivos grandes)
-    setTimeout(() => {
+    if (datosRecuperados) {
+        db = datosRecuperados;
+        console.log("Datos recuperados con éxito: " + db.Alumnos.length);
+    }
+
+    // Dibujado forzado con reintentos
+    const intentarDibujar = () => {
         if (typeof actualizarSelectoresLogin === "function") actualizarSelectoresLogin();
         if (typeof actualizarTablaAlumnos === "function") actualizarTablaAlumnos();
-        
-        // Buscamos la función de monitores con cualquier nombre posible
-        const funcMonitores = typeof actualizarTablaMonitores === "function" ? actualizarTablaMonitores : 
-                              (typeof actualizarMonitores === "function" ? actualizarMonitores : null);
-        if (funcMonitores) funcMonitores();
-
+        if (typeof actualizarTablaMonitores === "function") actualizarTablaMonitores();
         if (typeof actualizarTablaActividades === "function") actualizarTablaActividades();
         if (typeof generarHorario === "function") generarHorario();
-    }, 1500);
+    };
 
-    // 3. PROTECCIÓN NUBE: No dejamos que la nube vacía borre lo que acabamos de importar
+    setTimeout(intentarDibujar, 500);
+    setTimeout(intentarDibujar, 2000); // Segundo intento por si el primero falló
+
+    // Sincronización con la nube (Solo si la nube tiene más datos que nosotros)
     if (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) {
         fetch(SCRIPT_URL + "?action=read")
             .then(res => res.json())
             .then(data => {
-                const localAlumnos = (db.Alumnos) ? db.Alumnos.length : 0;
-                // REGLA: Solo sobreescribimos si la nube trae MÁS datos que el PC
-                if (data && data.Alumnos && data.Alumnos.length > localAlumnos) {
+                const actualAlumnos = (db.Alumnos) ? db.Alumnos.length : 0;
+                if (data && data.Alumnos && data.Alumnos.length > actualAlumnos) {
                     db = data;
                     localStorage.setItem('melide_db', JSON.stringify(db));
-                    location.reload();
+                    intentarDibujar();
                 }
-            }).catch(e => console.log("Trabajando en modo local (PC)"));
+            }).catch(e => console.log("Modo local"));
     }
 });
 </script>
