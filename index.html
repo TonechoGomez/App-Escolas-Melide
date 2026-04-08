@@ -220,11 +220,11 @@
 <script>
 // [01] VARIABLES GLOBALES Y ESTADO
 // [01] CONFIGURACIÓN DE LA NUBE
-const SCRIPT_URL = https://script.google.com/macros/s/AKfycbwoJOBwrPMDuKUH5hCQGsunqOJORaurterImsMZ5aP3bg8-bX7DESPysPk-Lo4w5izoSA/exec;
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwoJOBwrPMDuKUH5hCQGsunqOJORaurterImsMZ5aP3bg8-bX7DESPysPk-Lo4w5izoSA/exec";
     let currentSection = '';
     let monitorActivo = 'todos';
     let currentView = 'scr-inicio';
-    let userRole = 'tecnico';
+    let userRole = ''; // Lo dejamos vacío para que se rellene al hacer login
     const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Lunes-Miércoles", "Martes-Jueves"];
     
     const db = JSON.parse(localStorage.getItem('melide_db')) || { 
@@ -290,10 +290,31 @@ const SCRIPT_URL = https://script.google.com/macros/s/AKfycbwoJOBwrPMDuKUH5hCQGs
 }
 
 function login() {
-    userRole = document.getElementById('user-role').value;
-    const monitorElem = document.getElementById('id-monitor-login');
-    monitorActivo = (userRole === 'monitor' && monitorElem) ? monitorElem.value : 'todos';
+    const user = document.getElementById('userSelect').value;
+    const pass = document.getElementById('passInput').value;
+    const monitorSelect = document.getElementById('id-monitor-login');
 
+    // 1. Verificación de credenciales y asignación de Rol
+    if (user === 'tecnico' && pass === '1234') {
+        userRole = 'Tecnico';
+        monitorActivo = 'todos';
+    } else if (user === 'profesor' && pass === '4321') {
+        userRole = 'Monitor';
+        // Si es monitor, guardamos su nombre para que solo edite lo suyo
+        monitorActivo = monitorSelect ? monitorSelect.value : 'todos';
+    } else if (user === 'concejal' && pass === '0000') {
+        userRole = 'Concejal';
+        monitorActivo = 'todos';
+    } else {
+        alert("Contraseña incorrecta");
+        return;
+    }
+
+    // 2. Cambiar de pantalla
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main-app').style.display = 'block';
+
+    // 3. Configurar el Menú Principal según el Rol
     const menu = document.getElementById('menu-container');
     if (!menu) return;
     menu.innerHTML = '';
@@ -306,7 +327,8 @@ function login() {
         {id: 'Horarios', icon: '🗓️'}
     ];
 
-    if (userRole === 'tecnico') {
+    // Solo el Técnico ve el botón de Configuración
+    if (userRole === 'Tecnico') {
         tabs.push({id: 'Config', icon: '⚙️'});
     }
 
@@ -318,29 +340,20 @@ function login() {
         menu.appendChild(card);
     });
 
-    nav('scr-dash');
+    // 4. Aplicar restricciones visuales (ocultar botones si es Concejal)
+    applyPermissions();
+    renderSection('inicio');
 }
 
-    function login() {
-    userRole = document.getElementById('user-role').value;
-    const monitorSelect = document.getElementById('id-monitor-login');
-    monitorActivo = (userRole === 'monitor' && monitorSelect) ? monitorSelect.value : 'todos';
-
-    const menu = document.getElementById('menu-container');
-    if (!menu) return;
-    menu.innerHTML = '';
-
-    let tabs = [
-        {id: 'Monitores', icon: '👥'}, 
-        {id: 'Actividades', icon: '🏆'}, 
-        {id: 'Aulas', icon: '🏠'}, 
-        {id: 'Alumnos', icon: '🎓'}, 
-        {id: 'Horarios', icon: '🗓️'}
-    ];
-
-    if (userRole === 'tecnico') {
-        tabs.push({id: 'Config', icon: '⚙️'});
+function applyPermissions() {
+    if (userRole === 'Concejal') {
+        // Buscamos botones de añadir, borrar y guardar para ocultarlos
+        setTimeout(() => {
+            const forbidden = document.querySelectorAll('.btn-add, .btn-save, .btn-delete, .btn-edit, button[onclick*="save"], button[onclick*="delete"]');
+            forbidden.forEach(btn => btn.style.display = 'none');
+        }, 100); 
     }
+}
 
     tabs.forEach(tab => {
         const card = document.createElement('div');
