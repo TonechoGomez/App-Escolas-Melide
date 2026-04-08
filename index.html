@@ -232,7 +232,7 @@ let currentView = 'scr-inicio';
 let userRole = ''; 
 const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Lunes-Miércoles", "Martes-Jueves"];
 
-const db = JSON.parse(localStorage.getItem('melide_db')) || { 
+let db = JSON.parse(localStorage.getItem('melide_db')) || { 
     Monitores: [], 
     Aulas: [{nome: 'PARROQUIAS', espacios:["MACEDA", "FURELOS", "MOLDES", "GROBAS", "SANTALLA", "SAN MARTIÑO", "SAN SALVADOR"]}], 
     Actividades: [], 
