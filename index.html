@@ -227,7 +227,7 @@
 // [01] VARIABLES GLOBALES Y ESTADO
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyclZ9c73kiGQGFwHeBROUrSCBb5vT-aAF_byWKAhfeIBQ6WqglcGVefHSu50cfPA9dBQ/exec";
 
-// Definición única de la base de datos
+// Única declaración de DB
 var db = { Monitores: [], Actividades: [], Alumnos: [], Aulas: [], Instalaciones: [] };
 
 let currentSection = '';
@@ -236,30 +236,69 @@ let currentView = 'scr-inicio';
 let userRole = ''; 
 const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Lunes-Miércoles", "Martes-Jueves"];
 
-// Intentar recuperar memoria local al arrancar
-const datosLocales = localStorage.getItem('melide_db') || localStorage.getItem('escolas_db');
-if (datosLocales) {
-    try {
-        const parsed = JSON.parse(datosLocales);
-        if (parsed && parsed.Alumnos) {
-            db = parsed;
-            console.log("Memoria local cargada: " + db.Alumnos.length + " alumnos.");
-        }
-    } catch(e) { console.error("Error al leer memoria local"); }
-}
-// 2. CARGA DE MEMORIA (Recupera os 920 alumnos e as aulas do JSON)
+// CARGA DE MEMORIA (Se ejecuta una sola vez al abrir)
 try {
     const almacenado = localStorage.getItem('melide_db') || localStorage.getItem('escolas_db');
     if (almacenado) {
         const datosRecuperados = JSON.parse(almacenado);
-        if (datosRecuperados.Alumnos && datosRecuperados.Alumnos.length > 0) {
+        if (datosRecuperados && datosRecuperados.Alumnos) {
             db = datosRecuperados;
-            console.log("Datos recuperados: " + db.Alumnos.length + " alumnos.");
+            console.log("Memoria cargada: " + db.Alumnos.length + " alumnos.");
         }
     }
 } catch (error) {
-    console.error("Erro na carga inicial:", error);
+    console.error("Error en la carga inicial:", error);
 }
+// --- FUNCIONES DE PERSISTENCIA ---
+
+function saveData() {
+    // 1. Guardamos una copia rápida en el navegador por seguridad
+    localStorage.setItem('melide_db', JSON.stringify(db));
+    
+    console.log("Iniciando sincronización con Google Sheets...");
+    
+    // 2. Intentamos traer los datos actualizados de la nube
+    fetch(SCRIPT_URL)
+    .then(response => {
+        if (!response.ok) throw new Error('Error de red al conectar con Google');
+        return response.json();
+    })
+    .then(data => {
+        if (data && (data.Alumnos || data.Monitores)) {
+            // Actualizamos la base de datos global con los nuevos datos
+            db.Monitores = data.Monitores || [];
+            db.Actividades = data.Actividades || [];
+            db.Aulas = data.Aulas || [];
+            db.Alumnos = data.Alumnos || [];
+            
+            // Guardamos la copia definitiva en el navegador
+            localStorage.setItem('melide_db', JSON.stringify(db));
+            
+            alert("Sincronización con éxito. Alumnos cargados: " + db.Alumnos.length);
+
+            // Actualizamos los elementos visuales (desplegables de monitores)
+            if (typeof actualizarSelectoresLogin === "function") {
+                actualizarSelectoresLogin();
+            }
+            // Refrescamos tablas si ya estamos dentro
+            if (typeof updateAll === "function") updateAll();
+        } else {
+            alert("Atención: La nube respondió pero los datos están vacíos.");
+        }
+    })
+    .catch(err => {
+        console.warn("Modo Offline: No se pudo sincronizar. Usando datos locales.", err);
+    });
+}
+
+// Evento para que los nombres de los monitores aparezcan en el login al abrir la web
+window.addEventListener('load', () => {
+    if (db.Monitores && db.Monitores.length > 0) {
+        if (typeof actualizarSelectoresLogin === "function") {
+            actualizarSelectoresLogin();
+        }
+    }
+});
 
 // AUTO-REPARACIÓN DE DATOS
 function repairDB() {
@@ -1446,28 +1485,38 @@ window.addEventListener('load', () => {
         alert("Contrasinal incorrecta. Revisa los datos.");
     }
 }
+// --- FUNCIÓN DE ACCESO (LOGIN) ---
+
 function login() {
-    // 1. Capturamos los datos de la pantalla
-    const tipo = document.getElementById('userSelect').value;
-    const pass = document.getElementById('passInput').value;
+    // 1. Capturamos los elementos del HTML
+    const tipoSelect = document.getElementById('userSelect');
+    const passInput = document.getElementById('passInput');
     const monitorSelect = document.getElementById('id-monitor-login');
+    
+    if (!tipoSelect || !passInput) {
+        console.error("No se encuentran los campos de login en el HTML");
+        return;
+    }
+
+    const tipo = tipoSelect.value;
+    const pass = passInput.value;
     
     let nombreUsuario = "";
     let accesoValido = false;
 
-    // 2. Determinamos quién intenta entrar
+    // 2. Identificamos al usuario
     if (tipo === 'monitor') {
         nombreUsuario = monitorSelect ? monitorSelect.value : "";
+        if (!nombreUsuario) {
+            alert("Por favor, selecciona un monitor de la lista.");
+            return;
+        }
     } else {
         nombreUsuario = tipo.toUpperCase(); // TECNICO o CONCEJAL
     }
 
-    if (!nombreUsuario && tipo === 'monitor') {
-        alert("Por favor, selecciona un monitor");
-        return;
-    }
-
-    // 3. Validación de contraseñas
+    // 3. Verificamos credenciales
+    // Contraseñas maestras para técnicos/concejales
     if (tipo === 'tecnico' && pass === '1234') { 
         userRole = 'tecnico';
         accesoValido = true;
@@ -1475,38 +1524,40 @@ function login() {
         userRole = 'concejal';
         accesoValido = true;
     } else if (tipo === 'monitor') {
-        // Buscamos en los datos que descargamos de Google
-        const m = db.Monitores.find(x => (x.nome || x.nombre) === nombreUsuario);
-        if (m && m.pass === pass) {
+        // Buscamos al monitor en la base de datos (db.Monitores)
+        // Comparamos el nombre y la contraseña que viene de Google
+        const monitorEncontrado = db.Monitores.find(m => (m.nome || m.nombre) === nombreUsuario);
+        
+        if (monitorEncontrado && String(monitorEncontrado.pass) === String(pass)) {
             userRole = 'monitor';
             monitorActivo = nombreUsuario;
             accesoValido = true;
         }
     }
 
-    // 4. Ejecución del cambio de página
+    // 4. Cambio de pantalla si el login es correcto
     if (accesoValido) {
-        // Ocultamos el login y mostramos el panel (IDs: scr-inicio y scr-dash)
-        const inicio = document.getElementById('scr-inicio');
-        const dash = document.getElementById('scr-dash');
-        
-        if (inicio && dash) {
-            inicio.style.display = 'none';
-            inicio.classList.remove('active');
+        const pantallaInicio = document.getElementById('scr-inicio');
+        const pantallaPrincipal = document.getElementById('scr-dash');
+
+        if (pantallaInicio && pantallaPrincipal) {
+            // Efecto visual de cambio
+            pantallaInicio.style.display = 'none';
+            pantallaInicio.classList.remove('active');
             
-            dash.style.display = 'flex';
-            dash.classList.add('active');
+            pantallaPrincipal.style.display = 'flex';
+            pantallaPrincipal.classList.add('active');
             
-            // Refrescamos los datos para que se vea todo
+            // Cargamos la interfaz según el rol
             if (typeof actualizarMenuPrincipal === "function") actualizarMenuPrincipal();
             if (typeof updateAll === "function") updateAll();
             
-            console.log("Acceso concedido a: " + nombreUsuario);
+            console.log("Acceso concedido: " + nombreUsuario);
         } else {
-            alert("Error: No se encuentran las secciones de la página.");
+            alert("Error: No se encuentran las secciones de la página (scr-inicio/scr-dash).");
         }
     } else {
-        alert("Contrasinal incorrecta.");
+        alert("Usuario ou contrasinal incorrectos.");
     }
 }
 </script>
