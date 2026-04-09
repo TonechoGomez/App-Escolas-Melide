@@ -313,14 +313,37 @@ function cargarDatosDeNube() {
 
 function saveData() {
     localStorage.setItem('melide_db', JSON.stringify(db));
-    fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        body: JSON.stringify(db)
+    fetch(SCRIPT_URL)
+    .then(response => response.json())
+    .then(data => {
+        if (data && (data.Alumnos || data.Monitores)) {
+            // Actualizamos la base de datos con lo que viene de la nube
+            db.Monitores = data.Monitores || [];
+            db.Actividades = data.Actividades || [];
+            db.Aulas = data.Aulas || [];
+            db.Alumnos = data.Alumnos || [];
+            
+            // Guardamos la copia en el navegador
+            localStorage.setItem('melide_db', JSON.stringify(db));
+            
+            // ESTA ALERTA ES PARA LA TABLET:
+            alert("Sincronización con éxito. Alumnos: " + db.Alumnos.length);
+
+            // Actualizamos la pantalla y el login
+            if (typeof actualizarSelectoresLogin === "function") {
+                actualizarSelectoresLogin();
+            }
+            
+            if (typeof updateAll === "function") updateAll();
+            if (typeof dibujar === "function") dibujar();
+        } else {
+            alert("Atención: Google Sheets respondió pero no envió datos.");
+        }
     })
-    .then(() => console.log("Guardado en la nube"))
-    .catch(err => console.error("Error al guardar:", err));
-}
+    .catch(err => {
+        alert("Error de conexión: " + err.message);
+        console.warn("No se pudo conectar con la nube.", err);
+    });
 
 function actualizarSelectoresLogin() {
     const monitorSelect = document.getElementById('id-monitor-login');
