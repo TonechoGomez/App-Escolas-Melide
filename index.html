@@ -180,46 +180,37 @@
 </header>
 
 <div class="container" id="main-container">
-    <section id="scr-inicio" class="screen active">
-        <div class="welcome-card">
-            <div class="logo">🏆</div>
-            <h1 style="color:var(--melide-primary); margin-bottom:5px; text-align:center;">CONCELLO DE MELIDE</h1>
-            <p style="color:#64748b; margin-bottom:30px; text-align:center;">Xestión de Escolas Deportivas</p>
+    <section id="scr-inicio" class="screen active" style="display: flex; justify-content: center; align-items: center; height: 100vh;">
+        <div class="welcome-card" style="background: white; padding: 30px; border-radius: 20px; color: #1e293b; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+            <h1 style="color: #005696; text-align: center; margin-bottom: 20px;">Acceso</h1>
             
-            <div style="text-align:left; margin-bottom:15px;">
-                <label style="color:var(--text-main); font-weight:bold; display:block; margin-bottom:5px;">Tipo de Usuario</label>
-                <select id="userSelect" onchange="actualizarSelectoresLogin()" style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd;">
-                    <option value="tecnico">Técnico Municipal</option>
-                    <option value="concejal">Concejal</option>
-                    <option value="monitor">Monitor / Profesor</option>
-                </select>
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Tipo de Usuario</label>
+            <select id="userSelect" onchange="actualizarSelectoresLogin()" style="width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #ccc;">
+                <option value="tecnico">Técnico Municipal</option>
+                <option value="concejal">Concejal</option>
+                <option value="monitor">Monitor / Profesor</option>
+            </select>
+
+            <div id="monitor-select-container" style="display: none; margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">Seleccionar Monitor</label>
+                <select id="id-monitor-login" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc;"></select>
             </div>
 
-            <div id="monitor-select-container" style="display:none; text-align:left; margin-bottom:15px;">
-                <label style="color:var(--text-main); font-weight:bold; display:block; margin-bottom:5px;">Seleccionar Monitor</label>
-                <select id="id-monitor-login" style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd;"></select>
-            </div>
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Contrasinal</label>
+            <input type="password" id="passInput" placeholder="Clave de acceso" style="width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box;">
 
-            <div style="text-align:left; margin-bottom:25px;">
-                <label style="color:var(--text-main); font-weight:bold; display:block; margin-bottom:5px;">Contrasinal</label>
-                <input type="password" id="passInput" placeholder="Introduce a clave" style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd; box-sizing:border-box;">
-            </div>
-
-            <button class="btn" onclick="login()" style="width:100%; padding:15px; font-weight:bold;">ACCEDER AO PANEL</button>
+            <button class="btn" onclick="login()" style="width: 100%; padding: 15px; background: #005696; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">ENTRAR</button>
         </div>
     </section>
 
-    <section id="scr-dash" class="screen">
+    <section id="scr-dash" class="screen" style="display: none;">
         <div class="grid-menu" id="menu-container"></div>
-        <button class="btn-logout" onclick="logout()" style="margin-top:20px;">CERRAR SESIÓN</button>
+        <button class="btn-logout" onclick="logout()">CERRAR SESIÓN</button>
     </section>
 
-    <section id="scr-edit" class="screen">
-        <div class="search-container" id="search-box-area">
-            <input type="text" id="global-search" class="search-input" placeholder="🔍 Buscar..." oninput="filterCurrentData()">
-        </div>
+    <section id="scr-edit" class="screen" style="display: none;">
         <div id="section-actions"></div>
-        <div id="data-container" class="data-grid"></div>
+        <div id="data-container"></div>
     </section>
 </div>
 
@@ -245,22 +236,53 @@ const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Lunes
 
 // --- 1. CARGA INICIAL Y SINCRONIZACIÓN ---
 
-function cargarDatos() {
-    // Intentar cargar de memoria local primero
-    const almacenado = localStorage.getItem('melide_db') || localStorage.getItem('escolas_db');
-    if (almacenado) {
-        try {
-            const datos = JSON.parse(almacenado);
-            if (datos && datos.Alumnos) {
-                db = datos;
-                console.log("Memoria local cargada: " + db.Alumnos.length + " alumnos.");
-                actualizarSelectoresLogin();
-            }
-        } catch (e) { console.error("Error al leer localStorage"); }
+window.addEventListener('load', () => {
+    // Intentar cargar primero lo que haya en el móvil/ordenador para ir rápido
+    const local = localStorage.getItem('melide_db');
+    if (local) {
+        db = JSON.parse(local);
+        actualizarSelectoresLogin(); // Rellenar lista de monitores con lo local
     }
-    // Sincronizar con la nube automáticamente
-    saveData();
+
+    // Ir a buscar los datos actualizados a Google Sheets
+    if (SCRIPT_URL) {
+        fetch(SCRIPT_URL + "?action=read")
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.Monitores) {
+                    db = data;
+                    localStorage.setItem('melide_db', JSON.stringify(db));
+                    actualizarSelectoresLogin(); // Actualizar lista con datos nuevos de Google
+                    console.log("Datos sincronizados con la nube");
+                }
+            })
+            .catch(err => console.log("Modo offline: usando datos locales"));
+    }
+});
+
+// Esta función es vital para que veas los nombres en el desplegable de Monitor
+function actualizarSelectoresLogin() {
+    const tipo = document.getElementById('userSelect').value;
+    const container = document.getElementById('monitor-select-container');
+    const selMonitor = document.getElementById('id-monitor-login');
+
+    if (tipo === 'monitor') {
+        container.style.display = 'block';
+        if (selMonitor && db.Monitores) {
+            // Ordenamos los nombres de la A a la Z
+            const monitoresOrdenados = [...db.Monitores].sort((a, b) => 
+                (a.nome || "").localeCompare(b.nome || "")
+            );
+            
+            selMonitor.innerHTML = monitoresOrdenados.map(m => 
+                `<option value="${m.nome}">${m.nome}</option>`
+            ).join('');
+        }
+    } else {
+        container.style.display = 'none';
+    }
 }
+
 
 function saveData() {
     // Guardar copia local rápida
@@ -1414,38 +1436,54 @@ function login() {
     const tipo = document.getElementById('userSelect').value;
     const pass = document.getElementById('passInput').value;
     const monitorSelect = document.getElementById('id-monitor-login');
-    let nombreUsuario = (tipo === 'monitor') ? (monitorSelect ? monitorSelect.value : "") : tipo.toUpperCase();
+    
     let accesoValido = false;
 
-    // Validación de Roles
-    if (tipo === 'tecnico' && pass === '1234') { 
-        userRole = 'tecnico'; 
-        accesoValido = true; 
-    }
-    else if (tipo === 'concejal' && pass === '5678') { 
-        userRole = 'concejal'; 
-        accesoValido = true; 
-    }
+    // 1. Lógica para Técnico y Concejal
+    if (tipo === 'tecnico' && pass === '1234') {
+        userRole = 'tecnico';
+        accesoValido = true;
+    } else if (tipo === 'concejal' && pass === '5678') {
+        userRole = 'concejal';
+        accesoValido = true;
+    } 
+    // 2. Lógica para Monitores (buscando en la base de datos descargada)
     else if (tipo === 'monitor') {
-        const m = db.Monitores.find(x => (x.nome || x.nombre) === nombreUsuario);
-        if (m && String(m.pass) === String(pass)) { 
-            userRole = 'monitor'; 
-            monitorActivo = nombreUsuario; 
-            accesoValido = true; 
+        const nombreSel = monitorSelect ? monitorSelect.value : "";
+        if (db && db.Monitores) {
+            const m = db.Monitores.find(x => (x.nome || x.nombre) === nombreSel);
+            if (m && String(m.pass) === String(pass)) {
+                userRole = 'monitor';
+                monitorActivo = nombreSel;
+                accesoValido = true;
+            }
         }
     }
 
+    // 3. ¿Qué pasa si la clave es correcta?
     if (accesoValido) {
-        document.getElementById('scr-inicio').style.display = 'none';
-        const dash = document.getElementById('scr-dash');
-        dash.style.display = 'flex';
-        dash.classList.add('active');
+        // Ocultamos la pantalla de inicio
+        const scrInicio = document.getElementById('scr-inicio');
+        const scrDash = document.getElementById('scr-dash');
         
-        if (typeof actualizarMenuPrincipal === "function") actualizarMenuPrincipal();
-        if (typeof updateAll === "function") updateAll();
-        console.log("Sesión iniciada como: " + userRole);
+        if (scrInicio) scrInicio.style.display = 'none';
+        
+        if (scrDash) {
+            scrDash.style.display = 'flex';
+            scrDash.classList.add('active');
+        }
+
+        // Cargamos el menú principal (Horarios, Alumnos, etc.)
+        if (typeof actualizarMenuPrincipal === 'function') {
+            actualizarMenuPrincipal();
+        }
+        
+        // Sincronizamos datos si hay internet
+        if (typeof updateAll === 'function') updateAll();
+        
+        console.log("Sesión iniciada con éxito como: " + userRole);
     } else {
-        alert("Usuario ou contrasinal incorrectos.");
+        alert("Contrasinal incorrecto para " + tipo.toUpperCase());
     }
 }
 </script>
