@@ -381,24 +381,31 @@ function toggleMonitorLogin(val) {
 }
 
 function login() {
-    console.log("Iniciando proceso de login...");
-    const user = document.getElementById('userSelect').value;
-    const pass = document.getElementById('passInput').value;
-    const monitorSelect = document.getElementById('id-monitor-login');
+    const nombre = document.getElementById('usuario-login').value;
+    const pass = document.getElementById('pass-login').value;
 
-    if (user === 'tecnico' && pass === '1234') {
-        userRole = 'Tecnico';
-        monitorActivo = 'todos';
-    } else if ((user === 'monitor' || user === 'profesor' || user === 'monitor') && pass === '4321') {
-        userRole = 'Monitor';
-        monitorActivo = monitorSelect ? monitorSelect.value : 'todos';
-    } else if (user === 'concejal' && pass === '0000') {
-        userRole = 'Concejal';
-        monitorActivo = 'todos';
+    // 1. Buscamos el monitor en los datos que acaban de bajar de la nube
+    const monitor = db.Monitores.find(m => m.nombre === nombre);
+
+    if (monitor && monitor.pass === pass) {
+        usuarioActual = monitor;
+        
+        // 2. Guardamos en el navegador quién ha entrado
+        localStorage.setItem('usuarioActual', JSON.stringify(monitor));
+
+        // 3. CAMBIO DE PÁGINA: Asegúrate de que estas IDs coincidan con las tuyas
+        document.getElementById('pantalla-login').style.display = 'none';
+        document.getElementById('pantalla-principal').style.display = 'block';
+        
+        // 4. Dibujamos los datos
+        if (typeof dibujarTabla === "function") dibujarTabla();
+        if (typeof updateAll === "function") updateAll();
+        
+        alert("¡Bienvenido, " + nombre + "!");
     } else {
-        alert("Contrasinal incorrecto");
-        return;
+        alert("Usuario o contraseña incorrectos. (Revisa que hayas seleccionado un nombre)");
     }
+}
 
     // Acción de entrada
     const inicio = document.getElementById('scr-inicio');
