@@ -232,11 +232,32 @@
 <script>
 // [01] VARIABLES GLOBALES Y ESTADO
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyclZ9c73kiGQGFwHeBROUrSCBb5vT-aAF_byWKAhfeIBQ6WqglcGVefHSu50cfPA9dBQ/exec";
+
+// Única declaración de la base de datos
 var db = { Monitores: [], Actividades: [], Alumnos: [], Aulas: [], Instalaciones: [] };
+
 let userRole = ''; 
 let monitorActivo = '';
-let currentSection = '';
+let currentView = 'scr-inicio'; 
 const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Lunes-Miércoles", "Martes-Jueves"];
+
+// FUNCIÓN PARA CAMBIAR DE PANTALLA (Necesaria para el Login)
+function nav(id) {
+    // 1. Ocultamos todas las pantallas
+    document.querySelectorAll('.screen').forEach(s => {
+        s.classList.remove('active');
+        s.style.display = 'none';
+    });
+
+    // 2. Mostramos la pantalla que queremos
+    const target = document.getElementById(id);
+    if (target) {
+        target.classList.add('active');
+        // El dashboard suele ser flex, el resto bloque
+        target.style.display = (id === 'scr-dash') ? 'flex' : 'block';
+    }
+    currentView = id;
+}
 
 // --- 1. CARGA INICIAL Y SINCRONIZACIÓN ---
 window.addEventListener('load', () => {
@@ -1516,19 +1537,10 @@ function login() {
         }
     }
 
-    // 3. ¿Qué pasa si la clave es correcta?
+  // 3. ¿Qué pasa si la clave es correcta?
     if (accesoValido) {
-        // Quitamos la clase 'active' a todo y se la damos solo al Dashboard
-        document.querySelectorAll('.screen').forEach(s => {
-            s.classList.remove('active');
-            s.style.display = 'none'; // Aseguramos que se oculte todo
-        });
-
-        const scrDash = document.getElementById('scr-dash');
-        if (scrDash) {
-            scrDash.classList.add('active');
-            scrDash.style.display = 'block'; // Forzamos a que se vea
-        }
+        // Usamos la función nav para cambiar a la pantalla del panel
+        nav('scr-dash');
 
         // Dibujamos los botones de colores (Horarios, Alumnos...)
         if (typeof actualizarMenuPrincipal === 'function') {
