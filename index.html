@@ -282,35 +282,26 @@ repairDB();
 
 // Esta función descarga los datos de Google para que la App no esté vacía
 function cargarDatosDeNube() {
-    console.log("Sincronizando con Google Sheets...");
-   fetch(SCRIPT_URL) // Quitamos el "?action=read" porque ya no hace falta
+    console.log("Sincronizando con Google...");
+    fetch(SCRIPT_URL)
     .then(response => response.json())
     .then(data => {
-        if (data && (data.Alumnos || data.Monitores)) {
-            // Actualizamos la base de datos con lo que viene de la nube
+        if (data) {
             db.Monitores = data.Monitores || [];
             db.Actividades = data.Actividades || [];
             db.Aulas = data.Aulas || [];
             db.Alumnos = data.Alumnos || [];
             
-            // Guardamos la copia en el navegador para que funcione rápido
             localStorage.setItem('melide_db', JSON.stringify(db));
-            console.log("¡Éxito! " + db.Alumnos.length + " alumnos cargados de la nube.");
-            
-            // Actualizamos la pantalla y el login
-            actualizarSelectoresLogin();
-            
-            // Si tienes una función para dibujar la tabla, llámala aquí
-            if (typeof updateAll === "function") updateAll();
-            if (typeof dibujar === "function") dibujar();
+            actualizarSelectoresLogin(); // Esto llena la lista de monitores
+            console.log("Sincronización OK: " + db.Alumnos.length + " alumnos.");
         }
     })
-    .catch(err => {
-        console.warn("No se pudo conectar con la nube. Usando datos locales.", err);
-    });
+    .catch(err => console.warn("Error de conexión, usando locales."));
+}
 
-// Llamamos a la carga nada más abrir el archivo
-//cargarDatosDeNube();
+// Llama a la función al final de tu script
+cargarDatosDeNube();
 
 function saveData() {
     localStorage.setItem('melide_db', JSON.stringify(db));
@@ -382,29 +373,56 @@ function toggleMonitorLogin(val) {
 }
 
 function login() {
-    const nombre = document.getElementById('usuario-login').value;
-    const pass = document.getElementById('pass-login').value;
+    // 1. Detectamos qué tipo de usuario es
+    const tipo = document.getElementById('userSelect').value;
+    const passIntroducida = document.getElementById('passInput').value;
+    let nombreSeleccionado = "";
 
-    // 1. Buscamos el monitor en los datos que acaban de bajar de la nube
-    const monitor = db.Monitores.find(m => m.nombre === nombre);
-
-    if (monitor && monitor.pass === pass) {
-        usuarioActual = monitor;
-        
-        // 2. Guardamos en el navegador quién ha entrado
-        localStorage.setItem('usuarioActual', JSON.stringify(monitor));
-
-        // 3. CAMBIO DE PÁGINA: Asegúrate de que estas IDs coincidan con las tuyas
-        document.getElementById('pantalla-login').style.display = 'none';
-        document.getElementById('pantalla-principal').style.display = 'block';
-        
-        // 4. Dibujamos los datos
-        if (typeof dibujarTabla === "function") dibujarTabla();
-        if (typeof updateAll === "function") updateAll();
-        
-        alert("¡Bienvenido, " + nombre + "!");
+    // 2. Obtenemos el nombre según el tipo
+    if (tipo === 'monitor') {
+        nombreSeleccionado = document.getElementById('id-monitor-login').value;
     } else {
-        alert("Usuario o contraseña incorrectos. (Revisa que hayas seleccionado un nombre)");
+        nombreSeleccionado = tipo.toUpperCase(); // 'TECNICO' o 'CONCEJAL'
+    }
+
+    if (!nombreSeleccionado && tipo === 'monitor') {
+        alert("Por favor, selecciona un monitor");
+        return;
+    }
+
+    // 3. Validación de seguridad
+    let accesoConcedido = false;
+
+    if (tipo === 'tecnico' && passIntroducida === '1234') { // Cambia '1234' por tu clave de técnico
+        userRole = 'tecnico';
+        accesoConcedido = true;
+    } else if (tipo === 'concejal' && passIntroducida === '5678') { // Cambia '5678' por tu clave de concejal
+        userRole = 'concejal';
+        accesoConcedido = true;
+    } else if (tipo === 'monitor') {
+        // Buscamos al monitor en la base de datos descargada de Google
+        const monitor = db.Monitores.find(m => m.nome.trim().toUpperCase() === nombreSeleccionado.trim().toUpperCase());
+        if (monitor && monitor.pass === passIntroducida) {
+            userRole = 'monitor';
+            monitorActivo = monitor.nome;
+            accesoConcedido = true;
+        }
+    }
+
+    // 4. Ejecución del acceso
+    if (accesoConcedido) {
+        // Ocultamos login y mostramos dashboard
+        document.getElementById('scr-inicio').style.display = 'none';
+        document.getElementById('scr-inicio').classList.remove('active');
+        
+        document.getElementById('scr-dash').style.display = 'flex';
+        document.getElementById('scr-dash').classList.add('active');
+        
+        actualizarMenuPrincipal();
+        nav('scr-dash');
+        alert("¡Bienvenido!");
+    } else {
+        alert("Contrasinal incorrecta.");
     }
 }
 
