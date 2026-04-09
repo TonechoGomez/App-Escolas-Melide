@@ -236,117 +236,33 @@ let currentView = 'scr-inicio';
 let userRole = ''; 
 const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Lunes-Miércoles", "Martes-Jueves"];
 
-// CARGA DE MEMORIA (Se ejecuta una sola vez al abrir)
-try {
+// --- 1. CARGA INICIAL Y SINCRONIZACIÓN ---
+
+function cargarDatos() {
+    // Intentar cargar de memoria local primero
     const almacenado = localStorage.getItem('melide_db') || localStorage.getItem('escolas_db');
     if (almacenado) {
-        const datosRecuperados = JSON.parse(almacenado);
-        if (datosRecuperados && datosRecuperados.Alumnos) {
-            db = datosRecuperados;
-            console.log("Memoria cargada: " + db.Alumnos.length + " alumnos.");
-        }
-    }
-} catch (error) {
-    console.error("Error en la carga inicial:", error);
-}
-// --- FUNCIONES DE PERSISTENCIA ---
-
-function saveData() {
-    // 1. Guardamos una copia rápida en el navegador por seguridad
-    localStorage.setItem('melide_db', JSON.stringify(db));
-    
-    console.log("Iniciando sincronización con Google Sheets...");
-    
-    // 2. Intentamos traer los datos actualizados de la nube
-    fetch(SCRIPT_URL)
-    .then(response => {
-        if (!response.ok) throw new Error('Error de red al conectar con Google');
-        return response.json();
-    })
-    .then(data => {
-        if (data && (data.Alumnos || data.Monitores)) {
-            // Actualizamos la base de datos global con los nuevos datos
-            db.Monitores = data.Monitores || [];
-            db.Actividades = data.Actividades || [];
-            db.Aulas = data.Aulas || [];
-            db.Alumnos = data.Alumnos || [];
-            
-            // Guardamos la copia definitiva en el navegador
-            localStorage.setItem('melide_db', JSON.stringify(db));
-            
-            alert("Sincronización con éxito. Alumnos cargados: " + db.Alumnos.length);
-
-            // Actualizamos los elementos visuales (desplegables de monitores)
-            if (typeof actualizarSelectoresLogin === "function") {
+        try {
+            const datos = JSON.parse(almacenado);
+            if (datos && datos.Alumnos) {
+                db = datos;
+                console.log("Memoria local cargada: " + db.Alumnos.length + " alumnos.");
                 actualizarSelectoresLogin();
             }
-            // Refrescamos tablas si ya estamos dentro
-            if (typeof updateAll === "function") updateAll();
-        } else {
-            alert("Atención: La nube respondió pero los datos están vacíos.");
-        }
-    })
-    .catch(err => {
-        console.warn("Modo Offline: No se pudo sincronizar. Usando datos locales.", err);
-    });
-}
-
-// Evento para que los nombres de los monitores aparezcan en el login al abrir la web
-window.addEventListener('load', () => {
-    if (db.Monitores && db.Monitores.length > 0) {
-        if (typeof actualizarSelectoresLogin === "function") {
-            actualizarSelectoresLogin();
-        }
+        } catch (e) { console.error("Error al leer localStorage"); }
     }
-});
-
-// AUTO-REPARACIÓN DE DATOS
-function repairDB() {
-    db.Actividades.forEach(a => {
-        if(a.nome) a.nome = a.nome.trim().toUpperCase();
-        if(a.monitor) a.monitor = a.monitor.trim().toUpperCase();
-        if(a.aula) a.aula = a.aula.trim().toUpperCase();
-    });
-    db.Alumnos.forEach(a => {
-        if(a.nome) a.nome = a.nome.trim().toUpperCase();
-        if(a.act) a.act = a.act.trim().toUpperCase();
-    });
-    db.Monitores.forEach(m => {
-        if(m.nome) m.nome = m.nome.trim().toUpperCase();
-    });
+    // Sincronizar con la nube automáticamente
     saveData();
 }
-// [01] GESTIÓN DE DATOS (REPARACIÓN, CARGA Y GUARDADO)
-repairDB();
 
-// Esta función descarga los datos de Google para que la App no esté vacía
-function cargarDatosDeNube() {
+function saveData() {
+    // Guardar copia local rápida
+    localStorage.setItem('melide_db', JSON.stringify(db));
+    
     console.log("Sincronizando con Google...");
     fetch(SCRIPT_URL)
     .then(response => response.json())
     .then(data => {
-        if (data) {
-            db.Monitores = data.Monitores || [];
-            db.Actividades = data.Actividades || [];
-            db.Aulas = data.Aulas || [];
-            db.Alumnos = data.Alumnos || [];
-            
-            localStorage.setItem('melide_db', JSON.stringify(db));
-            actualizarSelectoresLogin(); // Esto llena la lista de monitores
-            console.log("Sincronización OK: " + db.Alumnos.length + " alumnos.");
-        }
-    })
-    .catch(err => console.warn("Error de conexión, usando locales."));
-}
-
-// Llama a la función al final de tu script
-cargarDatosDeNube();
-
-function saveData() {
-    localStorage.setItem('melide_db', JSON.stringify(db));
-    fetch(SCRIPT_URL)
-    .then(response => response.json())
-    .then(data => {
         if (data && (data.Alumnos || data.Monitores)) {
             db.Monitores = data.Monitores || [];
             db.Actividades = data.Actividades || [];
@@ -354,30 +270,20 @@ function saveData() {
             db.Alumnos = data.Alumnos || [];
             
             localStorage.setItem('melide_db', JSON.stringify(db));
-            
-            alert("Sincronización con éxito. Alumnos: " + db.Alumnos.length);
-
-            if (typeof actualizarSelectoresLogin === "function") {
-                actualizarSelectoresLogin();
-            }
+            actualizarSelectoresLogin();
             
             if (typeof updateAll === "function") updateAll();
-        } else {
-            alert("Atención: Google Sheets respondió sin datos.");
+            console.log("Sincronización completa. Alumnos: " + db.Alumnos.length);
         }
     })
-    .catch(err => {
-        console.warn("Error de sincronización:", err);
-    });
+    .catch(err => console.warn("Modo offline: usando datos locales."));
 }
-    .catch(err => {
-        alert("Error de conexión: " + err.message);
-        console.warn("No se pudo conectar con la nube.", err);
-    });
+
+// --- 2. FUNCIONES DE APOYO ---
 
 function actualizarSelectoresLogin() {
     const monitorSelect = document.getElementById('id-monitor-login');
-    if (monitorSelect) {
+    if (monitorSelect && db.Monitores) {
         monitorSelect.innerHTML = '<option value="">Selecciona Monitor...</option>';
         getSorted(db.Monitores).forEach(m => {
             const opt = document.createElement('option');
@@ -388,11 +294,6 @@ function actualizarSelectoresLogin() {
     }
 }
 
-function closeModal() {
-    document.getElementById('modal-overlay').classList.remove('active');
-    if(currentSection) renderSection(currentSection); 
-}
-
 function getSorted(array) { 
     if(!array) return [];
     return [...array].sort((a, b) => {
@@ -401,6 +302,27 @@ function getSorted(array) {
         return n1.localeCompare(n2, undefined, {numeric: true, sensitivity: 'base'});
     });
 }
+
+function repairDB() {
+    db.Actividades.forEach(a => {
+        if(a.nome) a.nome = a.nome.trim().toUpperCase();
+        if(a.monitor) a.monitor = a.monitor.trim().toUpperCase();
+    });
+    db.Alumnos.forEach(a => {
+        if(a.nome) a.nome = a.nome.trim().toUpperCase();
+        if(a.act) a.act = a.act.trim().toUpperCase();
+    });
+    saveData();
+}
+
+function closeModal() {
+    const modal = document.getElementById('modal-overlay');
+    if(modal) modal.classList.remove('active');
+    if(currentSection && typeof renderSection === "function") renderSection(currentSection); 
+}
+
+// Arrancar proceso
+window.onload = cargarDatos;
 
 // [02] MOTOR DE NAVEGACIÓN Y ACCESO
 function toggleMonitorLogin(val) {
@@ -1139,6 +1061,41 @@ function openAsistencia(actNome) {
             </div>`;
         });
     }
+	// --- LÓGICA DE WHATSAPP RECUPERADA ---
+    function sendWA(tipo, actNome) {
+        const cleanAct = actNome.trim().toUpperCase();
+        const alumnos = db.Alumnos.filter(a => (a.act || "").trim().toUpperCase() === cleanAct && (a.status === 'admitido' || !a.status));
+        
+        if (alumnos.length === 0) {
+            alert("No hay alumnos admitidos en esta actividad.");
+            return;
+        }
+
+        if (tipo === 'masivo') {
+            const msg = prompt("Escribe el mensaje para todos los alumnos de " + actNome + ":");
+            if (!msg) return;
+            
+            // Abrimos cada chat (el navegador puede bloquear ventanas emergentes, avisar al usuario)
+            alumnos.forEach(al => {
+                if (al.tlfs) {
+                    const soloNumeros = al.tlfs.split('|')[0].replace(/\D/g, '');
+                    if (soloNumeros) {
+                        window.open(`https://wa.me/34${soloNumeros}?text=${encodeURIComponent(msg)}`, '_blank');
+                    }
+                }
+            });
+        }
+    }
+
+    function sendIndividualWA(tlfs, nome) {
+        if (!tlfs) {
+            alert("Este alumno no tiene teléfonos registrados.");
+            return;
+        }
+        const numero = tlfs.split('|')[0].replace(/\D/g, '');
+        const msg = `Hola, nos ponemos en contacto con respecto a ${nome}...`;
+        window.open(`https://wa.me/34${numero}?text=${encodeURIComponent(msg)}`, '_blank');
+    }
 
     // SECCIÓN 2: LISTA DE ESPERA (Solo lectura)
     if(espera.length > 0) {
@@ -1411,151 +1368,65 @@ function importarDatos(event) {
 }
 
 
+// --- [06] CARGA, LOGIN Y SINCRONIZACIÓN CORREGIDA ---
 window.addEventListener('load', () => {
-    // 1. Primero intentamos cargar lo que haya en este dispositivo (Memoria local)
+    // 1. Cargar datos locales
     const local = localStorage.getItem('melide_db') || localStorage.getItem('escolas_db');
-    if (local) {
-        const dataLocal = JSON.parse(local);
-        if (dataLocal.Alumnos && dataLocal.Alumnos.length > 0) {
-            db = dataLocal;
-        }
-    }
+    if (local) db = JSON.parse(local);
 
-    // 2. FUNCIÓN DE DIBUJADO (La ejecutamos ahora y también cuando responda la nube)
-    const forzarDibujo = () => {
-        if (typeof actualizarSelectoresLogin === "function") actualizarSelectoresLogin();
-        if (currentSection) renderSection(currentSection); 
-    };
-    
-    // Dibujo inicial con lo que tengamos (o vacío si es dispositivo nuevo)
-    setTimeout(forzarDibujo, 200);
-
-    // 3. LA PIEZA CLAVE: Si hay URL de Google, pedimos los datos actualizados
+    // 2. Intentar carga desde la nube (si SCRIPT_URL existe)
     if (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL !== "") {
-        console.log("Sincronizando con la nube...");
         fetch(SCRIPT_URL + "?action=read")
             .then(res => res.json())
             .then(data => {
-                // Si la nube tiene datos reales...
-                if (data && data.Alumnos && data.Alumnos.length > 0) {
-                    const localCount = (db.Alumnos) ? db.Alumnos.length : 0;
-                    
-                    // Si el dispositivo está vacío o la nube tiene más alumnos, actualizamos
-                    if (data.Alumnos.length >= localCount) {
-                        db = data;
-                        localStorage.setItem('melide_db', JSON.stringify(db));
-                        localStorage.setItem('escolas_db', JSON.stringify(db));
-                        forzarDibujo(); // Repintamos con los datos nuevos de la nube
-                        console.log("Datos descargados de la nube: " + db.Alumnos.length + " alumnos.");
-                    }
+                if (data && data.Alumnos) {
+                    db = data;
+                    localStorage.setItem('melide_db', JSON.stringify(db));
+                    if (typeof actualizarSelectoresLogin === "function") actualizarSelectoresLogin();
                 }
-            })
-            .catch(err => console.log("Trabajando en modo local/offline."));
+            }).catch(e => console.log("Trabajando en modo local"));
     }
 
-    setTimeout(forzarDibujo, 1000);
-    console.log("Sistema listo. Estado inicial: " + (db.Alumnos ? db.Alumnos.length : 0) + " alumnos.");
+    // 3. Inicializar selectores
+    setTimeout(() => {
+        if (typeof actualizarSelectoresLogin === "function") actualizarSelectoresLogin();
+    }, 300);
 });
-// Esta función se asegura de que el botón de login siempre encuentre los datos
-
-
-    // 4. Ejecución del cambio de pantalla
-    if (accesoValido) {
-        const inicio = document.getElementById('scr-inicio');
-        const dash = document.getElementById('scr-dash');
-
-        if (inicio && dash) {
-            // Ocultar login
-            inicio.style.display = 'none';
-            inicio.classList.remove('active');
-            
-            // Mostrar panel principal
-            dash.style.display = 'flex';
-            dash.classList.add('active');
-            
-            // Inicializar la interfaz del panel
-            if (typeof actualizarMenuPrincipal === "function") actualizarMenuPrincipal();
-            if (typeof nav === "function") nav('scr-dash');
-            
-            console.log("Acceso garantizado a: " + nombreUsuario);
-        } else {
-            alert("Error crítico: No se encuentran las secciones en el HTML.");
-        }
-    } else {
-        alert("Contrasinal incorrecta. Revisa los datos.");
-    }
-}
-// --- FUNCIÓN DE ACCESO (LOGIN) ---
 
 function login() {
-    // 1. Capturamos los elementos del HTML
-    const tipoSelect = document.getElementById('userSelect');
-    const passInput = document.getElementById('passInput');
+    const tipo = document.getElementById('userSelect').value;
+    const pass = document.getElementById('passInput').value;
     const monitorSelect = document.getElementById('id-monitor-login');
-    
-    if (!tipoSelect || !passInput) {
-        console.error("No se encuentran los campos de login en el HTML");
-        return;
-    }
-
-    const tipo = tipoSelect.value;
-    const pass = passInput.value;
-    
-    let nombreUsuario = "";
+    let nombreUsuario = (tipo === 'monitor') ? (monitorSelect ? monitorSelect.value : "") : tipo.toUpperCase();
     let accesoValido = false;
 
-    // 2. Identificamos al usuario
-    if (tipo === 'monitor') {
-        nombreUsuario = monitorSelect ? monitorSelect.value : "";
-        if (!nombreUsuario) {
-            alert("Por favor, selecciona un monitor de la lista.");
-            return;
-        }
-    } else {
-        nombreUsuario = tipo.toUpperCase(); // TECNICO o CONCEJAL
-    }
-
-    // 3. Verificamos credenciales
-    // Contraseñas maestras para técnicos/concejales
+    // Validación de Roles
     if (tipo === 'tecnico' && pass === '1234') { 
-        userRole = 'tecnico';
-        accesoValido = true;
-    } else if (tipo === 'concejal' && pass === '5678') {
-        userRole = 'concejal';
-        accesoValido = true;
-    } else if (tipo === 'monitor') {
-        // Buscamos al monitor en la base de datos (db.Monitores)
-        // Comparamos el nombre y la contraseña que viene de Google
-        const monitorEncontrado = db.Monitores.find(m => (m.nome || m.nombre) === nombreUsuario);
-        
-        if (monitorEncontrado && String(monitorEncontrado.pass) === String(pass)) {
-            userRole = 'monitor';
-            monitorActivo = nombreUsuario;
-            accesoValido = true;
+        userRole = 'tecnico'; 
+        accesoValido = true; 
+    }
+    else if (tipo === 'concejal' && pass === '5678') { 
+        userRole = 'concejal'; 
+        accesoValido = true; 
+    }
+    else if (tipo === 'monitor') {
+        const m = db.Monitores.find(x => (x.nome || x.nombre) === nombreUsuario);
+        if (m && String(m.pass) === String(pass)) { 
+            userRole = 'monitor'; 
+            monitorActivo = nombreUsuario; 
+            accesoValido = true; 
         }
     }
 
-    // 4. Cambio de pantalla si el login es correcto
     if (accesoValido) {
-        const pantallaInicio = document.getElementById('scr-inicio');
-        const pantallaPrincipal = document.getElementById('scr-dash');
-
-        if (pantallaInicio && pantallaPrincipal) {
-            // Efecto visual de cambio
-            pantallaInicio.style.display = 'none';
-            pantallaInicio.classList.remove('active');
-            
-            pantallaPrincipal.style.display = 'flex';
-            pantallaPrincipal.classList.add('active');
-            
-            // Cargamos la interfaz según el rol
-            if (typeof actualizarMenuPrincipal === "function") actualizarMenuPrincipal();
-            if (typeof updateAll === "function") updateAll();
-            
-            console.log("Acceso concedido: " + nombreUsuario);
-        } else {
-            alert("Error: No se encuentran las secciones de la página (scr-inicio/scr-dash).");
-        }
+        document.getElementById('scr-inicio').style.display = 'none';
+        const dash = document.getElementById('scr-dash');
+        dash.style.display = 'flex';
+        dash.classList.add('active');
+        
+        if (typeof actualizarMenuPrincipal === "function") actualizarMenuPrincipal();
+        if (typeof updateAll === "function") updateAll();
+        console.log("Sesión iniciada como: " + userRole);
     } else {
         alert("Usuario ou contrasinal incorrectos.");
     }
