@@ -205,7 +205,7 @@
                 <input type="password" id="passInput" placeholder="Introduce a clave" style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd; box-sizing:border-box;">
             </div>
 
-           <button class="btn" onclick="login()" style="width:100%; padding:15px; font-weight:bold; background:#005696; color:white; border:none; border-radius:10px; cursor:pointer; margin-top:10px;">ENTRAR AO PANEL</button>
+           <button class="btn" onclick="login()" style="width:100%; padding:15px; background:#005696; color:white; border:none; border-radius:10px; cursor:pointer; font-weight:bold; position:relative; z-index:100;">ENTRAR AO PANEL</button>
         </div>
     </section>
 
@@ -1450,23 +1450,22 @@ window.addEventListener('load', () => {
     }, 300);
 });
 
+// --- FUNCIÓN DE LOGIN CORREGIDA Y CONECTADA ---
 function login() {
+    console.log("Intentando iniciar sesión...");
     const tipo = document.getElementById('userSelect').value;
     const pass = document.getElementById('passInput').value;
     const monitorSelect = document.getElementById('id-monitor-login');
     
     let accesoValido = false;
 
-    // 1. Lógica para Técnico y Concejal
     if (tipo === 'tecnico' && pass === '1234') {
         userRole = 'tecnico';
         accesoValido = true;
     } else if (tipo === 'concejal' && pass === '5678') {
         userRole = 'concejal';
         accesoValido = true;
-    } 
-    // 2. Lógica para Monitores
-    else if (tipo === 'monitor') {
+    } else if (tipo === 'monitor') {
         const nombreSel = monitorSelect ? monitorSelect.value : "";
         if (db && db.Monitores) {
             const m = db.Monitores.find(x => (x.nome || x.nombre) === nombreSel);
@@ -1478,20 +1477,46 @@ function login() {
         }
     }
 
-    // 3. Entrada al sistema
     if (accesoValido) {
-        // Usamos la función nav para cambiar de pantalla
-        nav('scr-dash');
+        console.log("Login correcto. Cambiando pantalla...");
+        // Usamos la función nav que ya definiste arriba
+        if (typeof nav === 'function') {
+            nav('scr-dash');
+        } else {
+            // Si nav falla, forzamos el cambio visual
+            document.getElementById('scr-inicio').style.display = 'none';
+            document.getElementById('scr-dash').style.display = 'flex';
+            document.getElementById('scr-dash').classList.add('active');
+        }
 
-        // Dibujamos los botones del menú
+        // Dibujamos los botones
         if (typeof actualizarMenuPrincipal === 'function') {
             actualizarMenuPrincipal();
         }
-        console.log("Acceso concedido como: " + userRole);
     } else {
         alert("Contrasinal incorrecto para " + tipo.toUpperCase());
     }
 }
+
+// --- CORRECCIÓN DEL SELECTOR DE MONITORES ---
+function actualizarSelectoresLogin() {
+    const tipo = document.getElementById('userSelect').value;
+    const container = document.getElementById('monitor-select-container');
+    const selMonitor = document.getElementById('id-monitor-login');
+
+    if (tipo === 'monitor') {
+        container.style.display = 'block';
+        if (selMonitor && db.Monitores && db.Monitores.length > 0) {
+            const ordenados = [...db.Monitores].sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+            selMonitor.innerHTML = ordenados.map(m => `<option value="${m.nome}">${m.nome}</option>`).join('');
+        }
+    } else {
+        container.style.display = 'none';
+    }
+}
+
+// Asegurar que el cambio de tipo de usuario actualice la vista
+document.getElementById('userSelect').addEventListener('change', actualizarSelectoresLogin);
 </script>
 </body>
 </html>
