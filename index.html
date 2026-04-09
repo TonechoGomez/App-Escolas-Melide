@@ -205,7 +205,7 @@
                 <input type="password" id="passInput" placeholder="Introduce a clave" style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd; box-sizing:border-box;">
             </div>
 
-            <button class="btn" onclick="login()" style="width:100%; padding:15px; font-weight:bold;">ENTRAR AO PANEL</button>
+           <button class="btn" onclick="login()" style="width:100%; padding:15px; font-weight:bold; background:#005696; color:white; border:none; border-radius:10px; cursor:pointer; margin-top:10px;">ENTRAR AO PANEL</button>
         </div>
     </section>
 
@@ -232,8 +232,6 @@
 <script>
 // [01] VARIABLES GLOBALES Y ESTADO
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyclZ9c73kiGQGFwHeBROUrSCBb5vT-aAF_byWKAhfeIBQ6WqglcGVefHSu50cfPA9dBQ/exec";
-
-// Única declaración de la base de datos
 var db = { Monitores: [], Actividades: [], Alumnos: [], Aulas: [], Instalaciones: [] };
 
 let userRole = ''; 
@@ -241,19 +239,15 @@ let monitorActivo = '';
 let currentView = 'scr-inicio'; 
 const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Lunes-Miércoles", "Martes-Jueves"];
 
-// FUNCIÓN PARA CAMBIAR DE PANTALLA (Necesaria para el Login)
+// FUNCIÓN PARA CAMBIAR DE PANTALLA
 function nav(id) {
-    // 1. Ocultamos todas las pantallas
     document.querySelectorAll('.screen').forEach(s => {
         s.classList.remove('active');
         s.style.display = 'none';
     });
-
-    // 2. Mostramos la pantalla que queremos
     const target = document.getElementById(id);
     if (target) {
         target.classList.add('active');
-        // El dashboard suele ser flex, el resto bloque
         target.style.display = (id === 'scr-dash') ? 'flex' : 'block';
     }
     currentView = id;
@@ -268,6 +262,7 @@ window.addEventListener('load', () => {
             actualizarSelectoresLogin();
         } catch(e) { console.error("Error local storage"); }
     }
+    
     if (SCRIPT_URL) {
         fetch(SCRIPT_URL + "?action=read")
             .then(res => res.json())
@@ -276,6 +271,7 @@ window.addEventListener('load', () => {
                     db = data;
                     localStorage.setItem('melide_db', JSON.stringify(db));
                     actualizarSelectoresLogin();
+                    console.log("Datos sincronizados con la nube");
                 }
             }).catch(e => console.log("Modo offline activo"));
     }
@@ -285,11 +281,14 @@ function actualizarSelectoresLogin() {
     const tipo = document.getElementById('userSelect').value;
     const container = document.getElementById('monitor-select-container');
     const selMonitor = document.getElementById('id-monitor-login');
+    
     if (tipo === 'monitor') {
         container.style.display = 'block';
-        if (selMonitor && db.Monitores) {
+        if (selMonitor && db.Monitores && db.Monitores.length > 0) {
             const ordenados = [...db.Monitores].sort((a,b) => (a.nome||"").localeCompare(b.nome||""));
             selMonitor.innerHTML = ordenados.map(m => `<option value="${m.nome}">${m.nome}</option>`).join('');
+        } else if (selMonitor) {
+            selMonitor.innerHTML = '<option>Cargando monitores...</option>';
         }
     } else {
         container.style.display = 'none';
@@ -321,68 +320,10 @@ function actualizarMenuPrincipal() {
     });
 }
 
-    // Ir a buscar los datos actualizados a Google Sheets
-    if (SCRIPT_URL) {
-        fetch(SCRIPT_URL + "?action=read")
-            .then(res => res.json())
-            .then(data => {
-                if (data && data.Monitores) {
-                    db = data;
-                    localStorage.setItem('melide_db', JSON.stringify(db));
-                    actualizarSelectoresLogin(); // Actualizar lista con datos nuevos de Google
-                    console.log("Datos sincronizados con la nube");
-                }
-            })
-            .catch(err => console.log("Modo offline: usando datos locales"));
-    }
-});
-
-// Esta función es vital para que veas los nombres en el desplegable de Monitor
-function actualizarSelectoresLogin() {
-    const tipo = document.getElementById('userSelect').value;
-    const container = document.getElementById('monitor-select-container');
-    const selMonitor = document.getElementById('id-monitor-login');
-
-    if (tipo === 'monitor') {
-        container.style.display = 'block';
-        if (selMonitor && db.Monitores) {
-            // Ordenamos los nombres de la A a la Z
-            const monitoresOrdenados = [...db.Monitores].sort((a, b) => 
-                (a.nome || "").localeCompare(b.nome || "")
-            );
-            
-            selMonitor.innerHTML = monitoresOrdenados.map(m => 
-                `<option value="${m.nome}">${m.nome}</option>`
-            ).join('');
-        }
-    } else {
-        container.style.display = 'none';
-    }
-}
-
-
 function saveData() {
-    // Guardar copia local rápida
     localStorage.setItem('melide_db', JSON.stringify(db));
-    
-    console.log("Sincronizando con Google...");
-    fetch(SCRIPT_URL)
-    .then(response => response.json())
-    .then(data => {
-        if (data && (data.Alumnos || data.Monitores)) {
-            db.Monitores = data.Monitores || [];
-            db.Actividades = data.Actividades || [];
-            db.Aulas = data.Aulas || [];
-            db.Alumnos = data.Alumnos || [];
-            
-            localStorage.setItem('melide_db', JSON.stringify(db));
-            actualizarSelectoresLogin();
-            
-            if (typeof updateAll === "function") updateAll();
-            console.log("Sincronización completa. Alumnos: " + db.Alumnos.length);
-        }
-    })
-    .catch(err => console.warn("Modo offline: usando datos locales."));
+    console.log("Datos guardados localmente.");
+    // Aquí puedes añadir la llamada fetch a Google si necesitas subir cambios
 }
 
 // --- 2. FUNCIONES DE APOYO ---
@@ -1524,7 +1465,7 @@ function login() {
         userRole = 'concejal';
         accesoValido = true;
     } 
-    // 2. Lógica para Monitores (buscando en la base de datos descargada)
+    // 2. Lógica para Monitores
     else if (tipo === 'monitor') {
         const nombreSel = monitorSelect ? monitorSelect.value : "";
         if (db && db.Monitores) {
@@ -1537,20 +1478,20 @@ function login() {
         }
     }
 
-  // 3. ¿Qué pasa si la clave es correcta?
+    // 3. Entrada al sistema
     if (accesoValido) {
-        // Usamos la función nav para cambiar a la pantalla del panel
+        // Usamos la función nav para cambiar de pantalla
         nav('scr-dash');
 
-        // Dibujamos los botones de colores (Horarios, Alumnos...)
+        // Dibujamos los botones del menú
         if (typeof actualizarMenuPrincipal === 'function') {
             actualizarMenuPrincipal();
         }
-        
-        console.log("Sesión iniciada con éxito como: " + userRole);
+        console.log("Acceso concedido como: " + userRole);
     } else {
         alert("Contrasinal incorrecto para " + tipo.toUpperCase());
     }
+}
 </script>
 </body>
 </html>
