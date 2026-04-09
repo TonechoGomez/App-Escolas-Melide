@@ -226,27 +226,27 @@
 <script>
 // [01] VARIABLES GLOBALES Y ESTADO
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyclZ9c73kiGQGFwHeBROUrSCBb5vT-aAF_byWKAhfeIBQ6WqglcGVefHSu50cfPA9dBQ/exec";
-if (typeof db === 'undefined') { var db = { Monitores: [], Alumnos: [], Actividades: [], Aulas: [] }; }
+
+// Definición única de la base de datos
+var db = { Monitores: [], Actividades: [], Alumnos: [], Aulas: [], Instalaciones: [] };
+
 let currentSection = '';
 let monitorActivo = 'todos';
 let currentView = 'scr-inicio';
 let userRole = ''; 
 const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Lunes-Miércoles", "Martes-Jueves"];
 
-// 1. DEFINICIÓN INICIAL (Baleira para que non dea erro)
-// --- BLOQUE DE DATOS BLINDADO ---
-let db = { Monitores: [], Actividades: [], Alumnos: [], Aulas: [], Instalaciones: [] };
-
-// Intentar recuperar del PC antes que de cualquier otro sitio
+// Intentar recuperar memoria local al arrancar
 const datosLocales = localStorage.getItem('melide_db') || localStorage.getItem('escolas_db');
 if (datosLocales) {
-    const parsed = JSON.parse(datosLocales);
-    if (parsed.Alumnos && parsed.Alumnos.length > 0) {
-        db = parsed;
-        console.log("Memoria local cargada con éxito: " + db.Alumnos.length + " alumnos.");
-    }
+    try {
+        const parsed = JSON.parse(datosLocales);
+        if (parsed && parsed.Alumnos) {
+            db = parsed;
+            console.log("Memoria local cargada: " + db.Alumnos.length + " alumnos.");
+        }
+    } catch(e) { console.error("Error al leer memoria local"); }
 }
-
 // 2. CARGA DE MEMORIA (Recupera os 920 alumnos e as aulas do JSON)
 try {
     const almacenado = localStorage.getItem('melide_db') || localStorage.getItem('escolas_db');
@@ -309,29 +309,28 @@ function saveData() {
     .then(response => response.json())
     .then(data => {
         if (data && (data.Alumnos || data.Monitores)) {
-            // Actualizamos la base de datos con lo que viene de la nube
             db.Monitores = data.Monitores || [];
             db.Actividades = data.Actividades || [];
             db.Aulas = data.Aulas || [];
             db.Alumnos = data.Alumnos || [];
             
-            // Guardamos la copia en el navegador
             localStorage.setItem('melide_db', JSON.stringify(db));
             
-            // ESTA ALERTA ES PARA LA TABLET:
             alert("Sincronización con éxito. Alumnos: " + db.Alumnos.length);
 
-            // Actualizamos la pantalla y el login
             if (typeof actualizarSelectoresLogin === "function") {
                 actualizarSelectoresLogin();
             }
             
             if (typeof updateAll === "function") updateAll();
-            if (typeof dibujar === "function") dibujar();
         } else {
-            alert("Atención: Google Sheets respondió pero no envió datos.");
+            alert("Atención: Google Sheets respondió sin datos.");
         }
     })
+    .catch(err => {
+        console.warn("Error de sincronización:", err);
+    });
+}
     .catch(err => {
         alert("Error de conexión: " + err.message);
         console.warn("No se pudo conectar con la nube.", err);
@@ -372,45 +371,7 @@ function toggleMonitorLogin(val) {
     }
 }
 
-function login() {
-    // 1. Obtenemos los valores usando los IDs reales de tu HTML
-    const tipo = document.getElementById('userSelect').value;
-    const pass = document.getElementById('passInput').value;
-    const monitorSelect = document.getElementById('id-monitor-login');
-    
-    let nombreUsuario = "";
-    let accesoValido = false;
 
-    // 2. Identificar quién intenta entrar
-    if (tipo === 'monitor') {
-        nombreUsuario = monitorSelect ? monitorSelect.value : "";
-    } else {
-        nombreUsuario = tipo.toUpperCase(); // TECNICO o CONCEJAL
-    }
-
-    if (!nombreUsuario && tipo === 'monitor') {
-        alert("Por favor, selecciona un monitor en la lista.");
-        return;
-    }
-
-    // 3. Validar contra la base de datos 'db'
-    // IMPORTANTE: Asegúrate de que las contraseñas coincidan
-    if (tipo === 'tecnico' && pass === '1234') { 
-        userRole = 'tecnico';
-        accesoValido = true;
-    } else if (tipo === 'concejal' && pass === '5678') {
-        userRole = 'concejal';
-        accesoValido = true;
-    } else if (tipo === 'monitor') {
-        // Buscamos en los datos que bajaron de Google (db.Monitores)
-        // Usamos .nome porque así está en tu base de datos
-        const monitorEncontrado = db.Monitores.find(m => (m.nome || m.nombre) === nombreUsuario);
-        if (monitorEncontrado && monitorEncontrado.pass === pass) {
-            userRole = 'monitor';
-            monitorActivo = nombreUsuario;
-            accesoValido = true;
-        }
-    }
 
     // 4. CAMBIO DE PANTALLA
     if (accesoValido) {
@@ -438,24 +399,7 @@ function login() {
     }
 }
 
-    // 3. Validación de seguridad
-    let accesoConcedido = false;
-
-    if (tipo === 'tecnico' && passIntroducida === '1234') { // Cambia '1234' por tu clave de técnico
-        userRole = 'tecnico';
-        accesoConcedido = true;
-    } else if (tipo === 'concejal' && passIntroducida === '5678') { // Cambia '5678' por tu clave de concejal
-        userRole = 'concejal';
-        accesoConcedido = true;
-    } else if (tipo === 'monitor') {
-        // Buscamos al monitor en la base de datos descargada de Google
-        const monitor = db.Monitores.find(m => m.nome.trim().toUpperCase() === nombreSeleccionado.trim().toUpperCase());
-        if (monitor && monitor.pass === passIntroducida) {
-            userRole = 'monitor';
-            monitorActivo = monitor.nome;
-            accesoConcedido = true;
-        }
-    }
+    
 
     // 4. Ejecución del acceso
     if (accesoConcedido) {
@@ -1474,32 +1418,95 @@ window.addEventListener('load', () => {
     console.log("Sistema listo. Estado inicial: " + (db.Alumnos ? db.Alumnos.length : 0) + " alumnos.");
 });
 // Esta función se asegura de que el botón de login siempre encuentre los datos
+
+
+    // 4. Ejecución del cambio de pantalla
+    if (accesoValido) {
+        const inicio = document.getElementById('scr-inicio');
+        const dash = document.getElementById('scr-dash');
+
+        if (inicio && dash) {
+            // Ocultar login
+            inicio.style.display = 'none';
+            inicio.classList.remove('active');
+            
+            // Mostrar panel principal
+            dash.style.display = 'flex';
+            dash.classList.add('active');
+            
+            // Inicializar la interfaz del panel
+            if (typeof actualizarMenuPrincipal === "function") actualizarMenuPrincipal();
+            if (typeof nav === "function") nav('scr-dash');
+            
+            console.log("Acceso garantizado a: " + nombreUsuario);
+        } else {
+            alert("Error crítico: No se encuentran las secciones en el HTML.");
+        }
+    } else {
+        alert("Contrasinal incorrecta. Revisa los datos.");
+    }
+}
 function login() {
-    // 1. Intentamos recuperar los datos del almacenamiento local si db está vacío
-    if (!db.Monitores || db.Monitores.length === 0) {
-        const recuperado = localStorage.getItem('melide_db');
-        if (recuperado) db = JSON.parse(recuperado);
+    // 1. Capturamos los datos de la pantalla
+    const tipo = document.getElementById('userSelect').value;
+    const pass = document.getElementById('passInput').value;
+    const monitorSelect = document.getElementById('id-monitor-login');
+    
+    let nombreUsuario = "";
+    let accesoValido = false;
+
+    // 2. Determinamos quién intenta entrar
+    if (tipo === 'monitor') {
+        nombreUsuario = monitorSelect ? monitorSelect.value : "";
+    } else {
+        nombreUsuario = tipo.toUpperCase(); // TECNICO o CONCEJAL
     }
 
-    const nombre = document.getElementById('usuario-login').value;
-    const pass = document.getElementById('pass-login').value;
+    if (!nombreUsuario && tipo === 'monitor') {
+        alert("Por favor, selecciona un monitor");
+        return;
+    }
 
-    const monitor = db.Monitores.find(m => m.nombre === nombre);
+    // 3. Validación de contraseñas
+    if (tipo === 'tecnico' && pass === '1234') { 
+        userRole = 'tecnico';
+        accesoValido = true;
+    } else if (tipo === 'concejal' && pass === '5678') {
+        userRole = 'concejal';
+        accesoValido = true;
+    } else if (tipo === 'monitor') {
+        // Buscamos en los datos que descargamos de Google
+        const m = db.Monitores.find(x => (x.nome || x.nombre) === nombreUsuario);
+        if (m && m.pass === pass) {
+            userRole = 'monitor';
+            monitorActivo = nombreUsuario;
+            accesoValido = true;
+        }
+    }
 
-    if (monitor && monitor.pass === pass) {
-        // Si la contraseña coincide, forzamos el cambio de pantalla
-        // Ajusta estos IDs si en tu HTML se llaman diferente
-        if(document.getElementById('pantalla-login')) document.getElementById('pantalla-login').style.display = 'none';
-        if(document.getElementById('seccion-principal')) document.getElementById('seccion-principal').style.display = 'block';
-        if(document.getElementById('contenedor-principal')) document.getElementById('contenedor-principal').style.display = 'block';
+    // 4. Ejecución del cambio de página
+    if (accesoValido) {
+        // Ocultamos el login y mostramos el panel (IDs: scr-inicio y scr-dash)
+        const inicio = document.getElementById('scr-inicio');
+        const dash = document.getElementById('scr-dash');
         
-        // Ejecutamos las funciones de dibujo que ya tenías
-        if (typeof actualizarInterfaz === "function") actualizarInterfaz();
-        if (typeof updateAll === "function") updateAll();
-        
-        alert("Acceso correcto");
+        if (inicio && dash) {
+            inicio.style.display = 'none';
+            inicio.classList.remove('active');
+            
+            dash.style.display = 'flex';
+            dash.classList.add('active');
+            
+            // Refrescamos los datos para que se vea todo
+            if (typeof actualizarMenuPrincipal === "function") actualizarMenuPrincipal();
+            if (typeof updateAll === "function") updateAll();
+            
+            console.log("Acceso concedido a: " + nombreUsuario);
+        } else {
+            alert("Error: No se encuentran las secciones de la página.");
+        }
     } else {
-        alert("Error de acceso: Verifica usuario y contraseña.");
+        alert("Contrasinal incorrecta.");
     }
 }
 </script>
