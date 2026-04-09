@@ -226,6 +226,7 @@
 <script>
 // [01] VARIABLES GLOBALES Y ESTADO
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyclZ9c73kiGQGFwHeBROUrSCBb5vT-aAF_byWKAhfeIBQ6WqglcGVefHSu50cfPA9dBQ/exec";
+if (typeof db === 'undefined') { var db = { Monitores: [], Alumnos: [], Actividades: [], Aulas: [] }; }
 let currentSection = '';
 let monitorActivo = 'todos';
 let currentView = 'scr-inicio';
@@ -1406,6 +1407,35 @@ window.addEventListener('load', () => {
     setTimeout(forzarDibujo, 1000);
     console.log("Sistema listo. Estado inicial: " + (db.Alumnos ? db.Alumnos.length : 0) + " alumnos.");
 });
+// Esta función se asegura de que el botón de login siempre encuentre los datos
+function login() {
+    // 1. Intentamos recuperar los datos del almacenamiento local si db está vacío
+    if (!db.Monitores || db.Monitores.length === 0) {
+        const recuperado = localStorage.getItem('melide_db');
+        if (recuperado) db = JSON.parse(recuperado);
+    }
+
+    const nombre = document.getElementById('usuario-login').value;
+    const pass = document.getElementById('pass-login').value;
+
+    const monitor = db.Monitores.find(m => m.nombre === nombre);
+
+    if (monitor && monitor.pass === pass) {
+        // Si la contraseña coincide, forzamos el cambio de pantalla
+        // Ajusta estos IDs si en tu HTML se llaman diferente
+        if(document.getElementById('pantalla-login')) document.getElementById('pantalla-login').style.display = 'none';
+        if(document.getElementById('seccion-principal')) document.getElementById('seccion-principal').style.display = 'block';
+        if(document.getElementById('contenedor-principal')) document.getElementById('contenedor-principal').style.display = 'block';
+        
+        // Ejecutamos las funciones de dibujo que ya tenías
+        if (typeof actualizarInterfaz === "function") actualizarInterfaz();
+        if (typeof updateAll === "function") updateAll();
+        
+        alert("Acceso correcto");
+    } else {
+        alert("Error de acceso: Verifica usuario y contraseña.");
+    }
+}
 </script>
 </body>
 </html>
