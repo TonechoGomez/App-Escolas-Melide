@@ -180,37 +180,46 @@
 </header>
 
 <div class="container" id="main-container">
-    <section id="scr-inicio" class="screen active" style="display: flex; justify-content: center; align-items: center; height: 100vh;">
-        <div class="welcome-card" style="background: white; padding: 30px; border-radius: 20px; color: #1e293b; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
-            <h1 style="color: #005696; text-align: center; margin-bottom: 20px;">Acceso</h1>
+    <section id="scr-inicio" class="screen active">
+        <div class="welcome-card">
+            <div class="logo">🏆</div>
+            <h1 style="color:var(--melide-primary); margin-bottom:5px; text-align:center;">CONCELLO DE MELIDE</h1>
+            <p style="color:#64748b; margin-bottom:30px; text-align:center;">Xestión de Escolas Deportivas</p>
             
-            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Tipo de Usuario</label>
-            <select id="userSelect" onchange="actualizarSelectoresLogin()" style="width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #ccc;">
-                <option value="tecnico">Técnico Municipal</option>
-                <option value="concejal">Concejal</option>
-                <option value="monitor">Monitor / Profesor</option>
-            </select>
-
-            <div id="monitor-select-container" style="display: none; margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 5px; font-weight: bold;">Seleccionar Monitor</label>
-                <select id="id-monitor-login" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc;"></select>
+            <div style="text-align:left; margin-bottom:15px;">
+                <label style="color:var(--text-main); font-weight:bold; display:block; margin-bottom:5px;">Tipo de Usuario</label>
+                <select id="userSelect" onchange="actualizarSelectoresLogin()" style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd;">
+                    <option value="tecnico">Técnico Municipal</option>
+                    <option value="concejal">Concejal</option>
+                    <option value="monitor">Monitor / Profesor</option>
+                </select>
             </div>
 
-            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Contrasinal</label>
-            <input type="password" id="passInput" placeholder="Clave de acceso" style="width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box;">
+            <div id="monitor-select-container" style="display:none; text-align:left; margin-bottom:15px;">
+                <label style="color:var(--text-main); font-weight:bold; display:block; margin-bottom:5px;">Seleccionar Monitor</label>
+                <select id="id-monitor-login" style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd;"></select>
+            </div>
 
-            <button class="btn" onclick="login()" style="width: 100%; padding: 15px; background: #005696; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">ENTRAR</button>
+            <div style="text-align:left; margin-bottom:25px;">
+                <label style="color:var(--text-main); font-weight:bold; display:block; margin-bottom:5px;">Contrasinal</label>
+                <input type="password" id="passInput" placeholder="Introduce a clave" style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd; box-sizing:border-box;">
+            </div>
+
+            <button class="btn" onclick="login()" style="width:100%; padding:15px; font-weight:bold;">ENTRAR AO PANEL</button>
         </div>
     </section>
 
-    <section id="scr-dash" class="screen" style="display: none;">
+    <section id="scr-dash" class="screen">
         <div class="grid-menu" id="menu-container"></div>
-        <button class="btn-logout" onclick="logout()">CERRAR SESIÓN</button>
+        <button class="btn-logout" onclick="logout()" style="margin-top:20px;">CERRAR SESIÓN</button>
     </section>
 
-    <section id="scr-edit" class="screen" style="display: none;">
+    <section id="scr-edit" class="screen">
+        <div class="search-container" id="search-box-area">
+            <input type="text" id="global-search" class="search-input" placeholder="🔍 Buscar..." oninput="filterCurrentData()">
+        </div>
         <div id="section-actions"></div>
-        <div id="data-container"></div>
+        <div id="data-container" class="data-grid"></div>
     </section>
 </div>
 
@@ -220,29 +229,76 @@
         <div id="modal-body"></div>
     </div>
 </div>
-
 <script>
 // [01] VARIABLES GLOBALES Y ESTADO
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyclZ9c73kiGQGFwHeBROUrSCBb5vT-aAF_byWKAhfeIBQ6WqglcGVefHSu50cfPA9dBQ/exec";
-
-// Única declaración de DB
 var db = { Monitores: [], Actividades: [], Alumnos: [], Aulas: [], Instalaciones: [] };
-
-let currentSection = '';
-let monitorActivo = 'todos';
-let currentView = 'scr-inicio';
 let userRole = ''; 
+let monitorActivo = '';
+let currentSection = '';
 const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Lunes-Miércoles", "Martes-Jueves"];
 
 // --- 1. CARGA INICIAL Y SINCRONIZACIÓN ---
-
 window.addEventListener('load', () => {
-    // Intentar cargar primero lo que haya en el móvil/ordenador para ir rápido
     const local = localStorage.getItem('melide_db');
     if (local) {
-        db = JSON.parse(local);
-        actualizarSelectoresLogin(); // Rellenar lista de monitores con lo local
+        try {
+            db = JSON.parse(local);
+            actualizarSelectoresLogin();
+        } catch(e) { console.error("Error local storage"); }
     }
+    if (SCRIPT_URL) {
+        fetch(SCRIPT_URL + "?action=read")
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.Monitores) {
+                    db = data;
+                    localStorage.setItem('melide_db', JSON.stringify(db));
+                    actualizarSelectoresLogin();
+                }
+            }).catch(e => console.log("Modo offline activo"));
+    }
+});
+
+function actualizarSelectoresLogin() {
+    const tipo = document.getElementById('userSelect').value;
+    const container = document.getElementById('monitor-select-container');
+    const selMonitor = document.getElementById('id-monitor-login');
+    if (tipo === 'monitor') {
+        container.style.display = 'block';
+        if (selMonitor && db.Monitores) {
+            const ordenados = [...db.Monitores].sort((a,b) => (a.nome||"").localeCompare(b.nome||""));
+            selMonitor.innerHTML = ordenados.map(m => `<option value="${m.nome}">${m.nome}</option>`).join('');
+        }
+    } else {
+        container.style.display = 'none';
+    }
+}
+
+function actualizarMenuPrincipal() {
+    const menu = document.getElementById('menu-container');
+    if (!menu) return;
+    menu.innerHTML = '';
+    
+    let opciones = [
+        { nombre: 'Horarios', icono: '📅', color: '#3b82f6' },
+        { nombre: 'Alumnos', icono: '👥', color: '#10b981' }
+    ];
+
+    if (userRole === 'tecnico') {
+        opciones.push({ nombre: 'Monitores', icono: '👨‍🏫', color: '#f59e0b' });
+        opciones.push({ nombre: 'Configuración', icono: '⚙️', color: '#64748b' });
+    }
+
+    opciones.forEach(opt => {
+        const btn = document.createElement('div');
+        btn.className = 'menu-item';
+        btn.style.cssText = `background:${opt.color}; padding:20px; border-radius:15px; color:white; text-align:center; cursor:pointer; font-weight:bold; margin:10px;`;
+        btn.innerHTML = `<div style="font-size:2rem;">${opt.icono}</div><div>${opt.nombre}</div>`;
+        btn.onclick = () => renderSection(opt.nombre);
+        menu.appendChild(btn);
+    });
+}
 
     // Ir a buscar los datos actualizados a Google Sheets
     if (SCRIPT_URL) {
@@ -1462,30 +1518,27 @@ function login() {
 
     // 3. ¿Qué pasa si la clave es correcta?
     if (accesoValido) {
-        // Ocultamos la pantalla de inicio
-        const scrInicio = document.getElementById('scr-inicio');
+        // Quitamos la clase 'active' a todo y se la damos solo al Dashboard
+        document.querySelectorAll('.screen').forEach(s => {
+            s.classList.remove('active');
+            s.style.display = 'none'; // Aseguramos que se oculte todo
+        });
+
         const scrDash = document.getElementById('scr-dash');
-        
-        if (scrInicio) scrInicio.style.display = 'none';
-        
         if (scrDash) {
-            scrDash.style.display = 'flex';
             scrDash.classList.add('active');
+            scrDash.style.display = 'block'; // Forzamos a que se vea
         }
 
-        // Cargamos el menú principal (Horarios, Alumnos, etc.)
+        // Dibujamos los botones de colores (Horarios, Alumnos...)
         if (typeof actualizarMenuPrincipal === 'function') {
             actualizarMenuPrincipal();
         }
-        
-        // Sincronizamos datos si hay internet
-        if (typeof updateAll === 'function') updateAll();
         
         console.log("Sesión iniciada con éxito como: " + userRole);
     } else {
         alert("Contrasinal incorrecto para " + tipo.toUpperCase());
     }
-}
 </script>
 </body>
 </html>
