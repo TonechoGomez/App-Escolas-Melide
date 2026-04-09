@@ -182,29 +182,36 @@
 <div class="container" id="main-container">
     <section id="scr-inicio" class="screen active">
         <div class="welcome-card">
-            <h2 style="margin-top:0; color: var(--melide-primary); text-align: center;">Acceso Gestión</h2>
+            <div class="logo">🏆</div>
+            <h1 style="color:var(--melide-primary); margin-bottom:5px; text-align:center;">CONCELLO DE MELIDE</h1>
+            <p style="color:#64748b; margin-bottom:30px; text-align:center;">Xestión de Escolas Deportivas</p>
             
-            <label>Tipo de Usuario</label>
-            <select id="userSelect" onchange="toggleMonitorLogin(this.value)">
-                <option value="tecnico">Técnico Municipal</option>
-                <option value="monitor">Monitor / Profesor</option>
-                <option value="concejal">Concejal</option>
-            </select>
-
-            <div id="login-monitor-area" style="display:none;">
-                <label>Seleccionar Monitor</label>
-                <select id="id-monitor-login"></select>
+            <div style="text-align:left; margin-bottom:15px;">
+                <label style="color:var(--text-main); font-weight:bold; display:block; margin-bottom:5px;">Tipo de Usuario</label>
+                <select id="userSelect" onchange="actualizarSelectoresLogin()" style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd;">
+                    <option value="tecnico">Técnico Municipal</option>
+                    <option value="concejal">Concejal</option>
+                    <option value="monitor">Monitor / Profesor</option>
+                </select>
             </div>
 
-            <label style="margin-top:10px; display:block;">Contrasinal</label>
-            <input type="password" id="passInput" placeholder="Introduce a clave" style="width:100%; padding:10px; margin-bottom:15px; border-radius:4px; border:1px solid #ccc;">
+            <div id="monitor-select-container" style="display:none; text-align:left; margin-bottom:15px;">
+                <label style="color:var(--text-main); font-weight:bold; display:block; margin-bottom:5px;">Seleccionar Monitor</label>
+                <select id="id-monitor-login" style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd;"></select>
+            </div>
 
-            <button class="btn" onclick="login()">ENTRAR</button>
+            <div style="text-align:left; margin-bottom:25px;">
+                <label style="color:var(--text-main); font-weight:bold; display:block; margin-bottom:5px;">Contrasinal</label>
+                <input type="password" id="passInput" placeholder="Introduce a clave" style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd; box-sizing:border-box;">
+            </div>
+
+            <button class="btn" onclick="login()" style="width:100%; padding:15px; font-weight:bold;">ACCEDER AO PANEL</button>
         </div>
     </section>
+
     <section id="scr-dash" class="screen">
         <div class="grid-menu" id="menu-container"></div>
-        <button class="btn-logout" onclick="logout()">CERRAR SESIÓN</button>
+        <button class="btn-logout" onclick="logout()" style="margin-top:20px;">CERRAR SESIÓN</button>
     </section>
 
     <section id="scr-edit" class="screen">
@@ -281,25 +288,13 @@ function saveData() {
 
 // --- 2. FUNCIONES DE APOYO ---
 
-function actualizarSelectoresLogin() {
-    const monitorSelect = document.getElementById('id-monitor-login');
-    if (monitorSelect && db.Monitores) {
-        monitorSelect.innerHTML = '<option value="">Selecciona Monitor...</option>';
-        getSorted(db.Monitores).forEach(m => {
-            const opt = document.createElement('option');
-            opt.value = m.nome;
-            opt.textContent = m.nome;
-            monitorSelect.appendChild(opt);
-        });
-    }
-}
-
+// --- [01] UTILIDADES DE DATOS ---
 function getSorted(array) { 
     if(!array) return [];
     return [...array].sort((a, b) => {
         const n1 = (a.nome || "").toUpperCase();
         const n2 = (b.nome || "").toUpperCase();
-        return n1.localeCompare(n2, undefined, {numeric: true, sensitivity: 'base'});
+        return n1.localeCompare(n2, undefined, {numeric: true, sensitivity: "base"});
     });
 }
 
@@ -315,18 +310,40 @@ function repairDB() {
     saveData();
 }
 
+// --- [02] CONTROL DE INTERFAZ Y LOGIN ---
+function actualizarSelectoresLogin() {
+    const tipo = document.getElementById('userSelect').value;
+    const container = document.getElementById('monitor-select-container');
+    const selMonitor = document.getElementById('id-monitor-login');
+
+    if (tipo === 'monitor') {
+        container.style.display = 'block';
+        if (selMonitor && db.Monitores) {
+            selMonitor.innerHTML = '<option value="">-- Selecciona Monitor --</option>';
+            getSorted(db.Monitores).forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.nome;
+                opt.textContent = m.nome;
+                selMonitor.appendChild(opt);
+            });
+        }
+    } else {
+        container.style.display = 'none';
+    }
+}
+
 function closeModal() {
     const modal = document.getElementById('modal-overlay');
     if(modal) modal.classList.remove('active');
+    // Si estamos en una sección, refrescamos la vista
     if(currentSection && typeof renderSection === "function") renderSection(currentSection); 
 }
 
-// Arrancar proceso
-window.onload = cargarDatos;
-
-// [02] MOTOR DE NAVEGACIÓN Y ACCESO
-function toggleMonitorLogin(val) {
-    const area = document.getElementById('login-monitor-area');
+function logout() {
+    if(confirm("¿Pechar sesión?")) {
+        location.reload();
+    }
+}
     if (area) {
         area.style.display = (val === 'monitor' || val === 'profesor') ? 'block' : 'none';
     }
