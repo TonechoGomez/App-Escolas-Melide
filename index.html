@@ -282,25 +282,31 @@ repairDB();
 // Esta función descarga los datos de Google para que la App no esté vacía
 function cargarDatosDeNube() {
     console.log("Sincronizando con Google Sheets...");
-    fetch(SCRIPT_URL + "?action=read")
+   fetch(SCRIPT_URL) // Quitamos el "?action=read" porque ya no hace falta
     .then(response => response.json())
     .then(data => {
-        if (data) {
+        if (data && (data.Alumnos || data.Monitores)) {
+            // Actualizamos la base de datos con lo que viene de la nube
             db.Monitores = data.Monitores || [];
             db.Actividades = data.Actividades || [];
-            db.Aulas = data.Aulas || db.Aulas;
+            db.Aulas = data.Aulas || [];
             db.Alumnos = data.Alumnos || [];
             
-            // Guardamos la copia en el navegador
+            // Guardamos la copia en el navegador para que funcione rápido
             localStorage.setItem('melide_db', JSON.stringify(db));
-            console.log("Datos cargados correctamente.");
+            console.log("¡Éxito! " + db.Alumnos.length + " alumnos cargados de la nube.");
             
-            // Si hay monitores nuevos, los ponemos en el login
+            // Actualizamos la pantalla y el login
             actualizarSelectoresLogin();
+            
+            // Si tienes una función para dibujar la tabla, llámala aquí
+            if (typeof updateAll === "function") updateAll();
+            if (typeof dibujar === "function") dibujar();
         }
     })
-    .catch(err => console.warn("Usando datos locales (Offline):", err));
-}
+    .catch(err => {
+        console.warn("No se pudo conectar con la nube. Usando datos locales.", err);
+    });
 
 // Llamamos a la carga nada más abrir el archivo
 //cargarDatosDeNube();
