@@ -373,22 +373,70 @@ function toggleMonitorLogin(val) {
 }
 
 function login() {
-    // 1. Detectamos qué tipo de usuario es
+    // 1. Obtenemos los valores usando los IDs reales de tu HTML
     const tipo = document.getElementById('userSelect').value;
-    const passIntroducida = document.getElementById('passInput').value;
-    let nombreSeleccionado = "";
+    const pass = document.getElementById('passInput').value;
+    const monitorSelect = document.getElementById('id-monitor-login');
+    
+    let nombreUsuario = "";
+    let accesoValido = false;
 
-    // 2. Obtenemos el nombre según el tipo
+    // 2. Identificar quién intenta entrar
     if (tipo === 'monitor') {
-        nombreSeleccionado = document.getElementById('id-monitor-login').value;
+        nombreUsuario = monitorSelect ? monitorSelect.value : "";
     } else {
-        nombreSeleccionado = tipo.toUpperCase(); // 'TECNICO' o 'CONCEJAL'
+        nombreUsuario = tipo.toUpperCase(); // TECNICO o CONCEJAL
     }
 
-    if (!nombreSeleccionado && tipo === 'monitor') {
-        alert("Por favor, selecciona un monitor");
+    if (!nombreUsuario && tipo === 'monitor') {
+        alert("Por favor, selecciona un monitor en la lista.");
         return;
     }
+
+    // 3. Validar contra la base de datos 'db'
+    // IMPORTANTE: Asegúrate de que las contraseñas coincidan
+    if (tipo === 'tecnico' && pass === '1234') { 
+        userRole = 'tecnico';
+        accesoValido = true;
+    } else if (tipo === 'concejal' && pass === '5678') {
+        userRole = 'concejal';
+        accesoValido = true;
+    } else if (tipo === 'monitor') {
+        // Buscamos en los datos que bajaron de Google (db.Monitores)
+        // Usamos .nome porque así está en tu base de datos
+        const monitorEncontrado = db.Monitores.find(m => (m.nome || m.nombre) === nombreUsuario);
+        if (monitorEncontrado && monitorEncontrado.pass === pass) {
+            userRole = 'monitor';
+            monitorActivo = nombreUsuario;
+            accesoValido = true;
+        }
+    }
+
+    // 4. CAMBIO DE PANTALLA
+    if (accesoValido) {
+        // En tu archivo las pantallas se llaman 'scr-inicio' y 'scr-dash'
+        const inicio = document.getElementById('scr-inicio');
+        const dash = document.getElementById('scr-dash');
+
+        if (inicio && dash) {
+            inicio.style.display = 'none';
+            inicio.classList.remove('active');
+            
+            dash.style.display = 'flex';
+            dash.classList.add('active');
+            
+            // Actualizamos la interfaz
+            if (typeof actualizarMenuPrincipal === "function") actualizarMenuPrincipal();
+            if (typeof nav === "function") nav('scr-dash');
+            
+            console.log("Acceso correcto para: " + nombreUsuario);
+        } else {
+            alert("Error: No se encuentran las secciones de la página.");
+        }
+    } else {
+        alert("Usuario o contraseña incorrectos.");
+    }
+}
 
     // 3. Validación de seguridad
     let accesoConcedido = false;
