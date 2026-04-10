@@ -251,7 +251,7 @@
     repairDB();
     
  // --- CONFIGURACIÓN CLOUD ---
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz0EbMz7LzzCjgOcUlf8I8QSEHtTCOoPNPpSjeU4QNs3EnyXMcc4uSB4qcW6mqxUuzIHw/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwjM0pkD3a6n28z6NvnaMgh9UDMxMjxe9sOrfUlnVq6pqIEkMN7Uspz6o2BrjU0YVx2dA/exec";
 
 async function enviarDatosAWebApp() {
     if (!SCRIPT_URL || SCRIPT_URL.includes("TU_URL")) return;
@@ -291,37 +291,6 @@ async function enviarDatosAWebApp() {
     }
 }
 
-function login() {
-    userRole = document.getElementById('user-role').value;
-    const monitorElem = document.getElementById('id-monitor-login');
-    monitorActivo = (userRole === 'monitor' && monitorElem) ? monitorElem.value : 'todos';
-
-    const menu = document.getElementById('menu-container');
-    if (!menu) return;
-    menu.innerHTML = '';
-
-    let tabs = [
-        {id: 'Monitores', icon: '👥'}, 
-        {id: 'Actividades', icon: '🏆'}, 
-        {id: 'Aulas', icon: '🏠'}, 
-        {id: 'Alumnos', icon: '🎓'}, 
-        {id: 'Horarios', icon: '🗓️'}
-    ];
-
-    if (userRole === 'tecnico') {
-        tabs.push({id: 'Config', icon: '⚙️'});
-    }
-
-    tabs.forEach(tab => {
-        const card = document.createElement('div');
-        card.className = 'menu-card';
-        card.onclick = function() { renderSection(tab.id); };
-        card.innerHTML = `<div style="font-size:2.2rem">${tab.icon}</div><h3>${tab.id}</h3>`;
-        menu.appendChild(card);
-    });
-
-    nav('scr-dash');
-}
 
     function login() {
     userRole = document.getElementById('user-role').value;
