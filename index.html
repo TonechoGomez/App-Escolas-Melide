@@ -219,37 +219,45 @@
 
 <script>
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyrKFxBcP1eRh08HiUtvFS6Qas8BPuSe8UXdlH6nr3erg4KYippGK2pTnObgsNnwSZHpA/exec";
-// [01] VARIABLES GLOBALES Y ESTADO
-    let currentSection = '';
-    let monitorActivo = 'todos';
-    let currentView = 'scr-inicio';
-    let userRole = 'tecnico';
-    const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Lunes-Miércoles", "Martes-Jueves"];
-    
-    const db = JSON.parse(localStorage.getItem('melide_db')) || { 
-        Monitores: [], 
-        Aulas: [{nome: 'PARROQUIAS', espacios:["MACEDA", "FURELOS", "MOLDES", "GROBAS", "SANTALLA", "SAN MARTIÑO", "SAN SALVADOR"]}], 
-        Actividades: [], 
-        Alumnos: [] 
-    };
 
-    // AUTO-REPARACIÓN DE DATOS (Se ejecuta al cargar para limpiar errores previos)
-    function repairDB() {
-        db.Actividades.forEach(a => {
-            if(a.nome) a.nome = a.nome.trim().toUpperCase();
-            if(a.monitor) a.monitor = a.monitor.trim().toUpperCase();
-            if(a.aula) a.aula = a.aula.trim().toUpperCase();
-        });
-        db.Alumnos.forEach(a => {
-            if(a.nome) a.nome = a.nome.trim().toUpperCase();
-            if(a.act) a.act = a.act.trim().toUpperCase();
-        });
-        db.Monitores.forEach(m => {
-            if(m.nome) m.nome = m.nome.trim().toUpperCase();
-        });
-        saveData();
-    }
-    repairDB();
+// 1. Inicialización de la Base de Datos (Corregida para evitar duplicados)
+window.db = JSON.parse(localStorage.getItem('melide_db')) || { 
+    Monitores: [], 
+    Aulas: [{nome: 'PARROQUIAS', espacios:["MACEDA", "FURELOS", "MOLDES", "GROBAS", "SANTALLA", "SAN MARTIÑO", "SAN SALVADOR"]}], 
+    Actividades: [], 
+    Alumnos: [] 
+};
+var db = window.db;
+
+// 2. VARIABLES GLOBALES Y ESTADO
+let currentSection = '';
+let monitorActivo = 'todos';
+let currentView = 'scr-inicio';
+let userRole = 'tecnico';
+const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Lunes-Miércoles", "Martes-Jueves"];
+
+// 3. AUTO-REPARACIÓN DE DATOS
+function repairDB() {
+    if (!db.Monitores) db.Monitores = [];
+    if (!db.Aulas) db.Aulas = [];
+    if (!db.Actividades) db.Actividades = [];
+    if (!db.Alumnos) db.Alumnos = [];
+
+    db.Actividades.forEach(a => {
+        if(a.nome) a.nome = a.nome.trim().toUpperCase();
+        if(a.monitor) a.monitor = a.monitor.trim().toUpperCase();
+        if(a.aula) a.aula = a.aula.trim().toUpperCase();
+    });
+    db.Alumnos.forEach(a => {
+        if(a.nome) a.nome = a.nome.trim().toUpperCase();
+        if(a.act) a.act = a.act.trim().toUpperCase();
+    });
+    db.Monitores.forEach(m => {
+        if(m.nome) m.nome = m.nome.trim().toUpperCase();
+    });
+    saveData();
+}
+repairDB();
     
  // --- CONFIGURACIÓN CLOUD ---
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwxpr37HGSUY9O8Uj4OGAOwgkQAAiIYM4zLDplhGxmNz1Brlu0VtV9smmvPnA86gmCkRw/exec";
@@ -1190,10 +1198,7 @@ function importarDatos(event) {
     };
     reader.readAsText(file);
 }
-// --- SISTEMA DE SINCRONIZACIÓN ÚNICO ---
-
-
-// --- SISTEMA DE CARGA Y GUARDADO ---
+// --- SISTEMA DE SINCRONIZACIÓN FINAL ---
 
 async function enviarDatosAWebApp() {
     if (!window.SCRIPT_URL || SCRIPT_URL.includes("TU_URL")) return;
@@ -1204,27 +1209,28 @@ async function enviarDatosAWebApp() {
             headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify(window.db)
         });
-        console.log("Subida a Google completada.");
-    } catch (e) {
-        console.error("Error al enviar:", e);
-    }
+        console.log("Nube actualizada.");
+    } catch (e) { console.error("Error al subir:", e); }
 }
 
 async function cargarDatosDesdeWebApp() {
     if (!window.SCRIPT_URL || SCRIPT_URL.includes("TU_URL")) return; 
     try {
-        console.log("Sincronizando con la nube...");
+        console.log("Buscando datos en Google...");
         const resp = await fetch(SCRIPT_URL);
         const data = await resp.json();
         if (data && Object.keys(data).length > 0) {
             window.db = data;
+            db = data;
             localStorage.setItem('melide_db', JSON.stringify(window.db));
+            
+            // Refrescar vistas y activar el botón de entrar
             if (typeof renderAll === 'function') renderAll();
-            console.log("Datos descargados y aplicados.");
+            if (typeof toggleMonitorSelect === 'function') toggleMonitorSelect();
+            
+            console.log("Sincronización completa.");
         }
-    } catch (e) {
-        console.warn("No se encontraron datos en la nube o error de formato.");
-    }
+    } catch (e) { console.warn("Iniciando con datos locales."); }
 }
 
 function saveData() {
@@ -1232,7 +1238,6 @@ function saveData() {
     enviarDatosAWebApp();
 }
 
-// Arrancar la carga nada más abrir la página
 window.addEventListener('load', cargarDatosDesdeWebApp);
 </script>
 </body>
