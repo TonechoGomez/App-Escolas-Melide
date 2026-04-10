@@ -1256,6 +1256,15 @@ window.addEventListener('load', () => {
         cargarDatosDesdeWebApp();
     }
 });
+function saveData() {
+    // 1. Guarda en el navegador (para que no se borre al refrescar)
+    localStorage.setItem('melide_db', JSON.stringify(db));
+    
+    // 2. Ejecuta la sincronización con Google
+    enviarDatosAWebApp();
+    
+    console.log("Intentando sincronizar con Google Sheets...");
+}
 </script>
 </body>
 </html>
