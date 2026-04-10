@@ -218,6 +218,7 @@
 </div>
 
 <script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyrKFxBcP1eRh08HiUtvFS6Qas8BPuSe8UXdlH6nr3erg4KYippGK2pTnObgsNnwSZHpA/exec";
 // [01] VARIABLES GLOBALES Y ESTADO
     let currentSection = '';
     let monitorActivo = 'todos';
@@ -251,7 +252,7 @@
     repairDB();
     
  // --- CONFIGURACIÓN CLOUD ---
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbypiLlrz6L-GK-K3mV04iIHGFcsG5TbVDDA3SW20-FGFy9jbPm2Xqx-9vTOEbxIDsBb5w/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwxpr37HGSUY9O8Uj4OGAOwgkQAAiIYM4zLDplhGxmNz1Brlu0VtV9smmvPnA86gmCkRw/exec";
 
 
     function closeModal() {
@@ -1191,52 +1192,48 @@ function importarDatos(event) {
 }
 // --- SISTEMA DE SINCRONIZACIÓN ÚNICO ---
 
+
+// --- SISTEMA DE CARGA Y GUARDADO ---
+
 async function enviarDatosAWebApp() {
-    if (!SCRIPT_URL || SCRIPT_URL.includes("TU_URL")) return;
+    if (!window.SCRIPT_URL || SCRIPT_URL.includes("TU_URL")) return;
     try {
-        console.log("Enviando datos a Google...");
         await fetch(SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors', 
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify(db)
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify(window.db)
         });
-        console.log("Datos sincronizados en la nube.");
+        console.log("Subida a Google completada.");
     } catch (e) {
         console.error("Error al enviar:", e);
     }
 }
 
 async function cargarDatosDesdeWebApp() {
-    if (!SCRIPT_URL || SCRIPT_URL.includes("TU_URL")) return; 
+    if (!window.SCRIPT_URL || SCRIPT_URL.includes("TU_URL")) return; 
     try {
-        console.log("Descargando datos de la nube...");
-        const resp = await fetch(SCRIPT_URL + "?action=read");
+        console.log("Sincronizando con la nube...");
+        const resp = await fetch(SCRIPT_URL);
         const data = await resp.json();
-        
         if (data && Object.keys(data).length > 0) {
-            db = data;
-            localStorage.setItem('melide_db', JSON.stringify(db));
-            // Esta función es la que hace que veas los alumnos en las tablas
+            window.db = data;
+            localStorage.setItem('melide_db', JSON.stringify(window.db));
             if (typeof renderAll === 'function') renderAll();
-            console.log("Carga desde Google completada.");
+            console.log("Datos descargados y aplicados.");
         }
     } catch (e) {
-        console.warn("Google respondió pero la base de datos está vacía.");
+        console.warn("No se encontraron datos en la nube o error de formato.");
     }
 }
 
 function saveData() {
-    // 1. Guardar local
-    localStorage.setItem('melide_db', JSON.stringify(db));
-    // 2. Enviar a Google
+    localStorage.setItem('melide_db', JSON.stringify(window.db));
     enviarDatosAWebApp();
 }
 
-// ÚNICO GATILLO: Se activa al abrir la web
-window.addEventListener('load', () => {
-    cargarDatosDesdeWebApp();
-});
+// Arrancar la carga nada más abrir la página
+window.addEventListener('load', cargarDatosDesdeWebApp);
 </script>
 </body>
 </html>
