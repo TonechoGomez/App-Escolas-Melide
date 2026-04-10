@@ -1189,21 +1189,19 @@ function importarDatos(event) {
     };
     reader.readAsText(file);
 }
-// ==========================================
-// SISTEMA DE SINCRONIZACIÓN (VERSIÓN ÚNICA)
-// ==========================================
+// --- SISTEMA DE SINCRONIZACIÓN ÚNICO ---
 
 async function enviarDatosAWebApp() {
     if (!SCRIPT_URL || SCRIPT_URL.includes("TU_URL")) return;
     try {
-        console.log("Sincronizando con la memoria de Google...");
+        console.log("Enviando datos a Google...");
         await fetch(SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors', 
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(db)
         });
-        console.log("Datos a salvo en la nube.");
+        console.log("Datos sincronizados en la nube.");
     } catch (e) {
         console.error("Error al enviar:", e);
     }
@@ -1212,26 +1210,30 @@ async function enviarDatosAWebApp() {
 async function cargarDatosDesdeWebApp() {
     if (!SCRIPT_URL || SCRIPT_URL.includes("TU_URL")) return; 
     try {
-        console.log("Recuperando datos...");
+        console.log("Descargando datos de la nube...");
         const resp = await fetch(SCRIPT_URL + "?action=read");
         const data = await resp.json();
+        
         if (data && Object.keys(data).length > 0) {
             db = data;
             localStorage.setItem('melide_db', JSON.stringify(db));
+            // Esta función es la que hace que veas los alumnos en las tablas
             if (typeof renderAll === 'function') renderAll();
-            console.log("Datos cargados correctamente.");
+            console.log("Carga desde Google completada.");
         }
     } catch (e) {
-        console.error("Error al cargar:", e);
+        console.warn("Google respondió pero la base de datos está vacía.");
     }
 }
 
 function saveData() {
+    // 1. Guardar local
     localStorage.setItem('melide_db', JSON.stringify(db));
+    // 2. Enviar a Google
     enviarDatosAWebApp();
 }
 
-// GATILLO DE ARRANQUE
+// ÚNICO GATILLO: Se activa al abrir la web
 window.addEventListener('load', () => {
     cargarDatosDesdeWebApp();
 });
