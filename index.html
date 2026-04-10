@@ -251,7 +251,7 @@
     repairDB();
     
  // --- CONFIGURACIÓN CLOUD ---
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzqqTn2N0Cwt2HtgNbFbEgbsp88ZqcHMjEgCnR90wjGvpcUDPtOh27UhLbNvl3pSY6dKA/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbypiLlrz6L-GK-K3mV04iIHGFcsG5TbVDDA3SW20-FGFy9jbPm2Xqx-9vTOEbxIDsBb5w/exec";
 
 
     function closeModal() {
@@ -1196,47 +1196,42 @@ function importarDatos(event) {
 async function enviarDatosAWebApp() {
     if (!SCRIPT_URL || SCRIPT_URL.includes("TU_URL")) return;
     try {
-        console.log("Enviando datos a Google...");
+        console.log("Sincronizando con la memoria de Google...");
         await fetch(SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors', 
-            headers: { 'Content-Type': 'text/plain' },
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(db)
         });
-        console.log("Sincronización de subida finalizada.");
+        console.log("Datos a salvo en la nube.");
     } catch (e) {
-        console.error("Error al enviar a Google:", e);
+        console.error("Error al enviar:", e);
     }
 }
 
 async function cargarDatosDesdeWebApp() {
     if (!SCRIPT_URL || SCRIPT_URL.includes("TU_URL")) return; 
     try {
-        console.log("Descargando datos de Google...");
+        console.log("Recuperando datos...");
         const resp = await fetch(SCRIPT_URL + "?action=read");
         const data = await resp.json();
-        
         if (data && Object.keys(data).length > 0) {
             db = data;
             localStorage.setItem('melide_db', JSON.stringify(db));
-            // Redibuja la interfaz con los datos nuevos
             if (typeof renderAll === 'function') renderAll();
-            console.log("Datos de Google cargados con éxito.");
+            console.log("Datos cargados correctamente.");
         }
     } catch (e) {
-        console.error("Error al descargar de Google:", e);
+        console.error("Error al cargar:", e);
     }
 }
 
 function saveData() {
-    // 1. Guardar localmente
     localStorage.setItem('melide_db', JSON.stringify(db));
-    // 2. Enviar a la nube
     enviarDatosAWebApp();
-    console.log("Guardado local y sincronización iniciada...");
 }
 
-// EL GATILLO: Carga los datos automáticamente al abrir la página
+// GATILLO DE ARRANQUE
 window.addEventListener('load', () => {
     cargarDatosDesdeWebApp();
 });
