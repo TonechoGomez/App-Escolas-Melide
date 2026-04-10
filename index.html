@@ -1189,9 +1189,9 @@ function importarDatos(event) {
     };
     reader.readAsText(file);
 }
-// --- FUNCIONES DE SINCRONIZACIÓN (SOLO UNA VEZ) ---
-
-// --- SISTEMA DE SINCRONIZACIÓN PROFESIONAL ---
+// ==========================================
+// SISTEMA DE SINCRONIZACIÓN (VERSIÓN ÚNICA)
+// ==========================================
 
 async function enviarDatosAWebApp() {
     if (!SCRIPT_URL || SCRIPT_URL.includes("TU_URL")) return;
@@ -1199,7 +1199,7 @@ async function enviarDatosAWebApp() {
         console.log("Enviando datos a Google...");
         await fetch(SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', // Mantenemos esto para evitar errores de red, pero enviamos como texto
+            mode: 'no-cors', 
             headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify(db)
         });
@@ -1219,7 +1219,7 @@ async function cargarDatosDesdeWebApp() {
         if (data && Object.keys(data).length > 0) {
             db = data;
             localStorage.setItem('melide_db', JSON.stringify(db));
-            // Forzamos el dibujado de todas las tablas con los nuevos datos
+            // Redibuja la interfaz con los datos nuevos
             if (typeof renderAll === 'function') renderAll();
             console.log("Datos de Google cargados con éxito.");
         }
@@ -1233,59 +1233,13 @@ function saveData() {
     localStorage.setItem('melide_db', JSON.stringify(db));
     // 2. Enviar a la nube
     enviarDatosAWebApp();
-}
-
-// ESTO ASEGURA QUE AL ABRIR LA WEB, SE CARGUE GOOGLE ANTES QUE NADA
-window.addEventListener('DOMContentLoaded', () => {
-    cargarDatosDesdeWebApp();
-});
-
-async function cargarDatosDesdeWebApp() {
-    if (!SCRIPT_URL || SCRIPT_URL.includes("TU_URL")) return; 
-    try {
-        console.log("Intentando descargar datos de Google...");
-        const resp = await fetch(SCRIPT_URL + "?action=read");
-        const data = await resp.json();
-        if (data && Object.keys(data).length > 0) {
-            db = data;
-            localStorage.setItem('melide_db', JSON.stringify(db));
-            if (typeof renderAll === 'function') renderAll();
-            console.log("Datos descargados de Google con éxito");
-        }
-    } catch (e) {
-        console.error("Error al descargar desde Google:", e);
-    }
-}
-
-function saveData() {
-    // 1. Guarda en la memoria del navegador actual
-    localStorage.setItem('melide_db', JSON.stringify(db));
-    
-    // 2. Empuja los datos hacia Google Sheets
-    enviarDatosAWebApp();
-    
     console.log("Guardado local y sincronización iniciada...");
 }
 
-// ESTE ES EL GATILLO PARA EL MODO INCÓGNITO
+// EL GATILLO: Carga los datos automáticamente al abrir la página
 window.addEventListener('load', () => {
     cargarDatosDesdeWebApp();
 });
-// Este código se ejecuta solo al abrir la web
-window.addEventListener('load', () => {
-    if (typeof cargarDatosDesdeWebApp === 'function') {
-        cargarDatosDesdeWebApp();
-    }
-});
-function saveData() {
-    // 1. Guarda en el navegador (para que no se borre al refrescar)
-    localStorage.setItem('melide_db', JSON.stringify(db));
-    
-    // 2. Ejecuta la sincronización con Google
-    enviarDatosAWebApp();
-    
-    console.log("Intentando sincronizar con Google Sheets...");
-}
 </script>
 </body>
 </html>
