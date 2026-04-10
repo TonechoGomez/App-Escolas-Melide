@@ -251,7 +251,7 @@
     repairDB();
     
  // --- CONFIGURACIÓN CLOUD ---
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzSTUay_czE4dzUeBZLavWcpKri3A1qhYVQicQIMLdk3DFRbKtuiNOdH2K4Jm973hU8tg/exec"; // <--- PEGA TU URL AQUÍ
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzSTUay_czE4dzUeBZLavWcpKri3A1qhYVQicQIMLdk3DFRbKtuiNOdH2K4Jm973hU8tg/exec";
 
 async function enviarDatosAWebApp() {
     if (!SCRIPT_URL || SCRIPT_URL.includes("TU_URL")) return;
@@ -1234,6 +1234,28 @@ function importarDatos(event) {
     };
     reader.readAsText(file);
 }
+async function cargarDatosDesdeWebApp() {
+    // SCRIPT_URL debe ser la dirección que termina en /exec
+    if (!SCRIPT_URL || SCRIPT_URL.includes("TU_URL")) return; 
+    try {
+        const resp = await fetch(SCRIPT_URL + "?action=read");
+        const data = await resp.json();
+        if (data) {
+            db = data;
+            localStorage.setItem('melide_db', JSON.stringify(db));
+            if (typeof renderAll === 'function') renderAll();
+            console.log("Sincronización con Google completada");
+        }
+    } catch (e) {
+        console.error("Error al cargar desde Google:", e);
+    }
+}
+// Este código se ejecuta solo al abrir la web
+window.addEventListener('load', () => {
+    if (typeof cargarDatosDesdeWebApp === 'function') {
+        cargarDatosDesdeWebApp();
+    }
+});
 </script>
 </body>
 </html>
