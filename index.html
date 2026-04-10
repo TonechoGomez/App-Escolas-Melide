@@ -182,36 +182,23 @@
 <div class="container" id="main-container">
     <section id="scr-inicio" class="screen active">
         <div class="welcome-card">
-            <div class="logo">🏆</div>
-            <h1 style="color:var(--melide-primary); margin-bottom:5px; text-align:center;">CONCELLO DE MELIDE</h1>
-            <p style="color:#64748b; margin-bottom:30px; text-align:center;">Xestión de Escolas Deportivas</p>
-            
-            <div style="text-align:left; margin-bottom:15px;">
-                <label style="color:var(--text-main); font-weight:bold; display:block; margin-bottom:5px;">Tipo de Usuario</label>
-                <select id="userSelect" onchange="actualizarSelectoresLogin()" style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd;">
-                    <option value="tecnico">Técnico Municipal</option>
-                    <option value="concejal">Concejal</option>
-                    <option value="monitor">Monitor / Profesor</option>
-                </select>
+            <h2 style="margin-top:0; color: var(--melide-primary); text-align: center;">Acceso Gestión</h2>
+            <label>Tipo de Usuario</label>
+            <select id="user-role" onchange="toggleMonitorLogin(this.value)">
+                <option value="tecnico">Técnico Municipal</option>
+                <option value="monitor">Monitor / Profesor</option>
+            </select>
+            <div id="login-monitor-area" style="display:none;">
+                <label>Seleccionar Monitor</label>
+                <select id="id-monitor-login"></select>
             </div>
-
-            <div id="monitor-select-container" style="display:none; text-align:left; margin-bottom:15px;">
-                <label style="color:var(--text-main); font-weight:bold; display:block; margin-bottom:5px;">Seleccionar Monitor</label>
-                <select id="id-monitor-login" style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd;"></select>
-            </div>
-
-            <div style="text-align:left; margin-bottom:25px;">
-                <label style="color:var(--text-main); font-weight:bold; display:block; margin-bottom:5px;">Contrasinal</label>
-                <input type="password" id="passInput" placeholder="Introduce a clave" style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd; box-sizing:border-box;">
-            </div>
-
-           <button class="btn" onclick="login()" style="width:100%; padding:15px; background:#005696; color:white; border:none; border-radius:10px; cursor:pointer; font-weight:bold; position:relative; z-index:100;">ENTRAR AO PANEL</button>
+            <button class="btn" onclick="login()">ENTRAR</button>
         </div>
     </section>
 
     <section id="scr-dash" class="screen">
         <div class="grid-menu" id="menu-container"></div>
-        <button class="btn-logout" onclick="logout()" style="margin-top:20px;">CERRAR SESIÓN</button>
+        <button class="btn-logout" onclick="logout()">CERRAR SESIÓN</button>
     </section>
 
     <section id="scr-edit" class="screen">
@@ -229,235 +216,86 @@
         <div id="modal-body"></div>
     </div>
 </div>
+
 <script>
 // [01] VARIABLES GLOBALES Y ESTADO
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyclZ9c73kiGQGFwHeBROUrSCBb5vT-aAF_byWKAhfeIBQ6WqglcGVefHSu50cfPA9dBQ/exec";
-var db = { Monitores: [], Actividades: [], Alumnos: [], Aulas: [], Instalaciones: [] };
-
-let userRole = ''; 
-let monitorActivo = '';
-let currentView = 'scr-inicio'; 
-const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Lunes-Miércoles", "Martes-Jueves"];
-
-// FUNCIÓN PARA CAMBIAR DE PANTALLA
-function nav(id) {
-    document.querySelectorAll('.screen').forEach(s => {
-        s.classList.remove('active');
-        s.style.display = 'none';
-    });
-    const target = document.getElementById(id);
-    if (target) {
-        target.classList.add('active');
-        target.style.display = (id === 'scr-dash') ? 'flex' : 'block';
-    }
-    currentView = id;
-}
-
-// --- 1. CARGA INICIAL Y SINCRONIZACIÓN ---
-window.addEventListener('load', () => {
-    const local = localStorage.getItem('melide_db');
-    if (local) {
-        try {
-            db = JSON.parse(local);
-            actualizarSelectoresLogin();
-        } catch(e) { console.error("Error local storage"); }
-    }
+    let currentSection = '';
+    let monitorActivo = 'todos';
+    let currentView = 'scr-inicio';
+    let userRole = 'tecnico';
+    const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Lunes-Miércoles", "Martes-Jueves"];
     
-    if (SCRIPT_URL) {
-        fetch(SCRIPT_URL + "?action=read")
-            .then(res => res.json())
-            .then(data => {
-                if (data && data.Monitores) {
-                    db = data;
-                    localStorage.setItem('melide_db', JSON.stringify(db));
-                    actualizarSelectoresLogin();
-                    console.log("Datos sincronizados con la nube");
-                }
-            }).catch(e => console.log("Modo offline activo"));
-    }
-});
+    const db = JSON.parse(localStorage.getItem('melide_db')) || { 
+        Monitores: [], 
+        Aulas: [{nome: 'PARROQUIAS', espacios:["MACEDA", "FURELOS", "MOLDES", "GROBAS", "SANTALLA", "SAN MARTIÑO", "SAN SALVADOR"]}], 
+        Actividades: [], 
+        Alumnos: [] 
+    };
 
-function actualizarSelectoresLogin() {
-    const tipo = document.getElementById('userSelect').value;
-    const container = document.getElementById('monitor-select-container');
-    const selMonitor = document.getElementById('id-monitor-login');
+    // AUTO-REPARACIÓN DE DATOS (Se ejecuta al cargar para limpiar errores previos)
+    function repairDB() {
+        db.Actividades.forEach(a => {
+            if(a.nome) a.nome = a.nome.trim().toUpperCase();
+            if(a.monitor) a.monitor = a.monitor.trim().toUpperCase();
+            if(a.aula) a.aula = a.aula.trim().toUpperCase();
+        });
+        db.Alumnos.forEach(a => {
+            if(a.nome) a.nome = a.nome.trim().toUpperCase();
+            if(a.act) a.act = a.act.trim().toUpperCase();
+        });
+        db.Monitores.forEach(m => {
+            if(m.nome) m.nome = m.nome.trim().toUpperCase();
+        });
+        saveData();
+    }
+    repairDB();
     
-    if (tipo === 'monitor') {
-        container.style.display = 'block';
-        if (selMonitor && db.Monitores && db.Monitores.length > 0) {
-            const ordenados = [...db.Monitores].sort((a,b) => (a.nome||"").localeCompare(b.nome||""));
-            selMonitor.innerHTML = ordenados.map(m => `<option value="${m.nome}">${m.nome}</option>`).join('');
-        } else if (selMonitor) {
-            selMonitor.innerHTML = '<option>Cargando monitores...</option>';
-        }
-    } else {
-        container.style.display = 'none';
+ // --- CONFIGURACIÓN CLOUD ---
+const SCRIPT_URL = "TU_URL_DE_GOOGLE_AQUÍ"; // <--- PEGA TU URL AQUÍ
+
+async function enviarDatosAWebApp() {
+    if (!SCRIPT_URL || SCRIPT_URL.includes("TU_URL")) return;
+    try {
+        await fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(db)
+        });
+        console.log("Datos sincronizados con Google");
+    } catch (e) {
+        console.error("Error al subir datos");
     }
 }
 
-function actualizarMenuPrincipal() {
-    const menu = document.getElementById('menu-container');
-    if (!menu) return;
-    menu.innerHTML = '';
-    
-    let opciones = [
-        { nombre: 'Horarios', icono: '📅', color: '#3b82f6' },
-        { nombre: 'Alumnos', icono: '👥', color: '#10b981' }
-    ];
-
-    if (userRole === 'tecnico') {
-        opciones.push({ nombre: 'Monitores', icono: '👨‍🏫', color: '#f59e0b' });
-        opciones.push({ nombre: 'Configuración', icono: '⚙️', color: '#64748b' });
+    function closeModal() {
+        document.getElementById('modal-overlay').classList.remove('active');
+        if(currentSection) filterCurrentData(); 
     }
 
-    opciones.forEach(opt => {
-        const btn = document.createElement('div');
-        btn.className = 'menu-item';
-        btn.style.cssText = `background:${opt.color}; padding:20px; border-radius:15px; color:white; text-align:center; cursor:pointer; font-weight:bold; margin:10px;`;
-        btn.innerHTML = `<div style="font-size:2rem;">${opt.icono}</div><div>${opt.nombre}</div>`;
-        btn.onclick = () => renderSection(opt.nombre);
-        menu.appendChild(btn);
-    });
-}
+    function getSorted(array) { 
+        if(!array) return [];
+        return [...array].sort((a, b) => {
+            const n1 = (a.nome || "").toUpperCase();
+            const n2 = (b.nome || "").toUpperCase();
+            return n1.localeCompare(n2, undefined, {numeric: true, sensitivity: 'base'});
+        });
+    }
 
-function saveData() {
-    localStorage.setItem('melide_db', JSON.stringify(db));
-    console.log("Datos guardados localmente.");
-    // Aquí puedes añadir la llamada fetch a Google si necesitas subir cambios
-}
-
-// --- 2. FUNCIONES DE APOYO ---
-
-// --- [01] UTILIDADES DE DATOS ---
-function getSorted(array) { 
-    if(!array) return [];
-    return [...array].sort((a, b) => {
-        const n1 = (a.nome || "").toUpperCase();
-        const n2 = (b.nome || "").toUpperCase();
-        return n1.localeCompare(n2, undefined, {numeric: true, sensitivity: "base"});
-    });
-}
-
-function repairDB() {
-    db.Actividades.forEach(a => {
-        if(a.nome) a.nome = a.nome.trim().toUpperCase();
-        if(a.monitor) a.monitor = a.monitor.trim().toUpperCase();
-    });
-    db.Alumnos.forEach(a => {
-        if(a.nome) a.nome = a.nome.trim().toUpperCase();
-        if(a.act) a.act = a.act.trim().toUpperCase();
-    });
-    saveData();
-}
-
-// --- [02] CONTROL DE INTERFAZ Y LOGIN ---
-function actualizarSelectoresLogin() {
-    const tipo = document.getElementById('userSelect').value;
-    const container = document.getElementById('monitor-select-container');
-    const selMonitor = document.getElementById('id-monitor-login');
-
-    if (tipo === 'monitor') {
-        container.style.display = 'block';
-        if (selMonitor && db.Monitores) {
-            selMonitor.innerHTML = '<option value="">-- Selecciona Monitor --</option>';
-            getSorted(db.Monitores).forEach(m => {
-                const opt = document.createElement('option');
-                opt.value = m.nome;
-                opt.textContent = m.nome;
-                selMonitor.appendChild(opt);
-            });
-        }
-    } else {
-        container.style.display = 'none';
+    // [02] MOTOR DE NAVEGACIÓN Y ACCESO
+	function toggleMonitorLogin() {
+    const role = document.getElementById('user-role').value;
+    const monitorSelect = document.getElementById('login-monitor-select');
+    if (monitorSelect) {
+        monitorSelect.style.display = (role === 'monitor') ? 'block' : 'none';
     }
 }
 
-function closeModal() {
-    const modal = document.getElementById('modal-overlay');
-    if(modal) modal.classList.remove('active');
-    // Si estamos en una sección, refrescamos la vista
-    if(currentSection && typeof renderSection === "function") renderSection(currentSection); 
-}
+function login() {
+    userRole = document.getElementById('user-role').value;
+    const monitorElem = document.getElementById('id-monitor-login');
+    monitorActivo = (userRole === 'monitor' && monitorElem) ? monitorElem.value : 'todos';
 
-function logout() {
-    if(confirm("¿Pechar sesión?")) {
-        location.reload();
-    }
-}
-    if (area) {
-        area.style.display = (val === 'monitor' || val === 'profesor') ? 'block' : 'none';
-    }
-}
-
-
-
-    // 4. CAMBIO DE PANTALLA
-    if (accesoValido) {
-        // En tu archivo las pantallas se llaman 'scr-inicio' y 'scr-dash'
-        const inicio = document.getElementById('scr-inicio');
-        const dash = document.getElementById('scr-dash');
-
-        if (inicio && dash) {
-            inicio.style.display = 'none';
-            inicio.classList.remove('active');
-            
-            dash.style.display = 'flex';
-            dash.classList.add('active');
-            
-            // Actualizamos la interfaz
-            if (typeof actualizarMenuPrincipal === "function") actualizarMenuPrincipal();
-            if (typeof nav === "function") nav('scr-dash');
-            
-            console.log("Acceso correcto para: " + nombreUsuario);
-        } else {
-            alert("Error: No se encuentran las secciones de la página.");
-        }
-    } else {
-        alert("Usuario o contraseña incorrectos.");
-    }
-}
-
-    
-
-    // 4. Ejecución del acceso
-    if (accesoConcedido) {
-        // Ocultamos login y mostramos dashboard
-        document.getElementById('scr-inicio').style.display = 'none';
-        document.getElementById('scr-inicio').classList.remove('active');
-        
-        document.getElementById('scr-dash').style.display = 'flex';
-        document.getElementById('scr-dash').classList.add('active');
-        
-        actualizarMenuPrincipal();
-        nav('scr-dash');
-        alert("¡Bienvenido!");
-    } else {
-        alert("Contrasinal incorrecta.");
-    }
-}
-
-    // Acción de entrada
-    const inicio = document.getElementById('scr-inicio');
-    if (inicio) {
-        inicio.style.display = 'none';
-        inicio.classList.remove('active');
-    }
-
-    const mainApp = document.getElementById('main-app') || document.getElementById('main-container');
-    if (mainApp) {
-        mainApp.style.display = 'block';
-        mainApp.classList.add('active');
-    }
-
-    actualizarMenuPrincipal();
-    if (typeof applyPermissions === "function") applyPermissions();
-    if (typeof renderSection === "function") renderSection('inicio');
-    nav('scr-dash');
-
-    console.log("Entrada confirmada como " + userRole);
-}
-
-function actualizarMenuPrincipal() {
     const menu = document.getElementById('menu-container');
     if (!menu) return;
     menu.innerHTML = '';
@@ -470,7 +308,7 @@ function actualizarMenuPrincipal() {
         {id: 'Horarios', icon: '🗓️'}
     ];
 
-    if (userRole === 'Tecnico') {
+    if (userRole === 'tecnico') {
         tabs.push({id: 'Config', icon: '⚙️'});
     }
 
@@ -481,35 +319,60 @@ function actualizarMenuPrincipal() {
         card.innerHTML = `<div style="font-size:2.2rem">${tab.icon}</div><h3>${tab.id}</h3>`;
         menu.appendChild(card);
     });
+
+    nav('scr-dash');
 }
 
-function applyPermissions() {
-    if (userRole === 'Concejal') {
-        setTimeout(() => {
-            const forbidden = document.querySelectorAll('.btn-add, .btn-save, .btn-delete, .btn-edit, button[onclick*="save"], button[onclick*="delete"]');
-            forbidden.forEach(btn => btn.style.display = 'none');
-        }, 100); 
+    function login() {
+    userRole = document.getElementById('user-role').value;
+    const monitorSelect = document.getElementById('id-monitor-login');
+    monitorActivo = (userRole === 'monitor' && monitorSelect) ? monitorSelect.value : 'todos';
+
+    const menu = document.getElementById('menu-container');
+    if (!menu) return;
+    menu.innerHTML = '';
+
+    let tabs = [
+        {id: 'Monitores', icon: '👥'}, 
+        {id: 'Actividades', icon: '🏆'}, 
+        {id: 'Aulas', icon: '🏠'}, 
+        {id: 'Alumnos', icon: '🎓'}, 
+        {id: 'Horarios', icon: '🗓️'}
+    ];
+
+    if (userRole === 'tecnico') {
+        tabs.push({id: 'Config', icon: '⚙️'});
     }
-}
 
-function logout() { nav('scr-inicio'); location.reload(); }
-
-function nav(id) {
-    document.querySelectorAll('.screen').forEach(s => {
-        s.classList.remove('active');
-        if(id === 'scr-inicio') s.style.display = (s.id === id) ? 'block' : 'none';
+    tabs.forEach(tab => {
+        const card = document.createElement('div');
+        card.className = 'menu-card';
+        card.onclick = function() { renderSection(tab.id); };
+        card.innerHTML = `<div style="font-size:2.2rem">${tab.icon}</div><h3>${tab.id}</h3>`;
+        menu.appendChild(card);
     });
-    const target = document.getElementById(id);
-    if(target) target.classList.add('active');
-    currentView = id;
-    const backBtn = document.getElementById('btn-back-header');
-    if(backBtn) backBtn.style.display = (id === 'scr-inicio') ? 'none' : 'flex';
+
+    nav('scr-dash');
 }
 
-function goBack() { 
-    if(currentView === 'scr-edit') nav('scr-dash');
-    else if(currentView === 'scr-dash') nav('scr-inicio');
-}
+    function logout() { nav('scr-inicio'); }
+
+    function nav(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        currentView = id;
+        document.getElementById('btn-back-header').style.display = (id === 'scr-inicio') ? 'none' : 'flex';
+    }
+
+    function goBack() { 
+        if(currentView === 'scr-edit') nav('scr-dash');
+        else if(currentView === 'scr-dash') nav('scr-inicio');
+    }
+
+    function toggleFS() { 
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(e => console.log(e));
+        else document.exitFullscreen();
+    }
 
 // [03] GESTIÓN DE VISTAS (RENDER)
     function renderSection(sec) {
@@ -1118,41 +981,6 @@ function openAsistencia(actNome) {
             </div>`;
         });
     }
-	// --- LÓGICA DE WHATSAPP RECUPERADA ---
-    function sendWA(tipo, actNome) {
-        const cleanAct = actNome.trim().toUpperCase();
-        const alumnos = db.Alumnos.filter(a => (a.act || "").trim().toUpperCase() === cleanAct && (a.status === 'admitido' || !a.status));
-        
-        if (alumnos.length === 0) {
-            alert("No hay alumnos admitidos en esta actividad.");
-            return;
-        }
-
-        if (tipo === 'masivo') {
-            const msg = prompt("Escribe el mensaje para todos los alumnos de " + actNome + ":");
-            if (!msg) return;
-            
-            // Abrimos cada chat (el navegador puede bloquear ventanas emergentes, avisar al usuario)
-            alumnos.forEach(al => {
-                if (al.tlfs) {
-                    const soloNumeros = al.tlfs.split('|')[0].replace(/\D/g, '');
-                    if (soloNumeros) {
-                        window.open(`https://wa.me/34${soloNumeros}?text=${encodeURIComponent(msg)}`, '_blank');
-                    }
-                }
-            });
-        }
-    }
-
-    function sendIndividualWA(tlfs, nome) {
-        if (!tlfs) {
-            alert("Este alumno no tiene teléfonos registrados.");
-            return;
-        }
-        const numero = tlfs.split('|')[0].replace(/\D/g, '');
-        const msg = `Hola, nos ponemos en contacto con respecto a ${nome}...`;
-        window.open(`https://wa.me/34${numero}?text=${encodeURIComponent(msg)}`, '_blank');
-    }
 
     // SECCIÓN 2: LISTA DE ESPERA (Solo lectura)
     if(espera.length > 0) {
@@ -1364,21 +1192,17 @@ function renderConfigView() {
     `;
 }
 function exportarDatos() {
-    try {
-        const dataStr = JSON.stringify(db, null, 2);
-        const blob = new Blob([dataStr], {type: "application/json"});
-        const url = URL.createObjectURL(blob);
-        
-        const nombreArchivo = 'backup_escolas_' + new Date().toISOString().slice(0,10) + '.json';
-        const linkElement = document.createElement('a');
-        linkElement.href = url;
-        linkElement.download = nombreArchivo;
-        linkElement.click();
-        
-        setTimeout(() => URL.revokeObjectURL(url), 100);
-    } catch (err) {
-        alert("Error al exportar: " + err.message);
-    }
+    const dataStr = JSON.stringify(db, null, 2);
+    const blob = new Blob([dataStr], {type: "application/json"});
+    const url = URL.createObjectURL(blob);
+    
+    const nombreArchivo = 'backup_escolas_' + new Date().toISOString().slice(0,10) + '.json';
+    const linkElement = document.createElement('a');
+    linkElement.href = url;
+    linkElement.download = nombreArchivo;
+    linkElement.click();
+    
+    setTimeout(() => URL.revokeObjectURL(url), 100);
 }
 
 function importarDatos(event) {
@@ -1387,136 +1211,29 @@ function importarDatos(event) {
     const reader = new FileReader();
     reader.onload = function(e) {
         try {
-            const datos = JSON.parse(e.target.result);
-            
-            // Forzamos la estructura en un objeto limpio
-            const estructuraNueva = {
-                Monitores: datos.Monitores || datos.monitores || [],
-                Actividades: datos.Actividades || datos.actividades || [],
-                Alumnos: datos.Alumnos || datos.alumnos || [],
-                Aulas: datos.Aulas || datos.aulas || []
-            };
-
-            if (confirm('¿Cargar ' + estructuraNueva.Alumnos.length + ' alumnos y todos los datos?')) {
-                // PASO CRÍTICO: Guardamos con todos los nombres posibles para evitar conflictos
-                const stringDatos = JSON.stringify(estructuraNueva);
-                localStorage.setItem('melide_db', stringDatos);
-                localStorage.setItem('escolas_db', stringDatos);
-                localStorage.setItem('db_gestion', stringDatos); // Un tercer nombre de respaldo
-
-                // Aplicamos a la variable viva del programa
-                db = estructuraNueva;
-
-                alert('¡DATOS GRABADOS EN EL NAVEGADOR! Ahora se enviarán a la nube.');
-
-                // Intentamos subir a Google Sheets
-                if (typeof saveData === 'function') {
+            let contenido = e.target.result;
+            // Limpia caracteres invisibles que rompen el JSON
+            contenido = contenido.replace(/^\uFEFF/, ""); 
+            const datos = JSON.parse(contenido);
+            if (datos && typeof datos === 'object') {
+                if (confirm('¿Cargar estos datos?')) {
+                    db = datos;
+                    if(!db.Alumnos) db.Alumnos = [];
+                    db.Alumnos.forEach(al => {
+                        if (al.phoneList && Array.isArray(al.phoneList)) al.tlfs = al.phoneList.join(' | ');
+                        if (al.tlfs === undefined) al.tlfs = "";
+                    });
                     saveData();
+                    alert('¡IMPORTACIÓN CORRECTA!');
+                    location.reload();
                 }
-
-                // Esperamos un segundo para que el navegador asiente los datos y reiniciamos
-                setTimeout(() => { location.reload(); }, 1000);
             }
         } catch (err) {
-            alert('Error al procesar el archivo: ' + err.message);
+            alert('ERROR: El archivo no es válido o tiene un formato de texto incorrecto.');
         }
     };
     reader.readAsText(file);
 }
-
-
-// --- [06] CARGA, LOGIN Y SINCRONIZACIÓN CORREGIDA ---
-window.addEventListener('load', () => {
-    // 1. Cargar datos locales
-    const local = localStorage.getItem('melide_db') || localStorage.getItem('escolas_db');
-    if (local) db = JSON.parse(local);
-
-    // 2. Intentar carga desde la nube (si SCRIPT_URL existe)
-    if (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL !== "") {
-        fetch(SCRIPT_URL + "?action=read")
-            .then(res => res.json())
-            .then(data => {
-                if (data && data.Alumnos) {
-                    db = data;
-                    localStorage.setItem('melide_db', JSON.stringify(db));
-                    if (typeof actualizarSelectoresLogin === "function") actualizarSelectoresLogin();
-                }
-            }).catch(e => console.log("Trabajando en modo local"));
-    }
-
-    // 3. Inicializar selectores
-    setTimeout(() => {
-        if (typeof actualizarSelectoresLogin === "function") actualizarSelectoresLogin();
-    }, 300);
-});
-
-// --- FUNCIÓN DE LOGIN CORREGIDA Y CONECTADA ---
-function login() {
-    console.log("Intentando iniciar sesión...");
-    const tipo = document.getElementById('userSelect').value;
-    const pass = document.getElementById('passInput').value;
-    const monitorSelect = document.getElementById('id-monitor-login');
-    
-    let accesoValido = false;
-
-    if (tipo === 'tecnico' && pass === '1234') {
-        userRole = 'tecnico';
-        accesoValido = true;
-    } else if (tipo === 'concejal' && pass === '5678') {
-        userRole = 'concejal';
-        accesoValido = true;
-    } else if (tipo === 'monitor') {
-        const nombreSel = monitorSelect ? monitorSelect.value : "";
-        if (db && db.Monitores) {
-            const m = db.Monitores.find(x => (x.nome || x.nombre) === nombreSel);
-            if (m && String(m.pass) === String(pass)) {
-                userRole = 'monitor';
-                monitorActivo = nombreSel;
-                accesoValido = true;
-            }
-        }
-    }
-
-    if (accesoValido) {
-        console.log("Login correcto. Cambiando pantalla...");
-        // Usamos la función nav que ya definiste arriba
-        if (typeof nav === 'function') {
-            nav('scr-dash');
-        } else {
-            // Si nav falla, forzamos el cambio visual
-            document.getElementById('scr-inicio').style.display = 'none';
-            document.getElementById('scr-dash').style.display = 'flex';
-            document.getElementById('scr-dash').classList.add('active');
-        }
-
-        // Dibujamos los botones
-        if (typeof actualizarMenuPrincipal === 'function') {
-            actualizarMenuPrincipal();
-        }
-    } else {
-        alert("Contrasinal incorrecto para " + tipo.toUpperCase());
-    }
-}
-
-// --- CORRECCIÓN DEL SELECTOR DE MONITORES ---
-function actualizarSelectoresLogin() {
-    const tipo = document.getElementById('userSelect').value;
-    const container = document.getElementById('monitor-select-container');
-    const selMonitor = document.getElementById('id-monitor-login');
-
-    if (tipo === 'monitor') {
-        container.style.display = 'block';
-        if (selMonitor && db.Monitores && db.Monitores.length > 0) {
-            const ordenados = [...db.Monitores].sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
-            selMonitor.innerHTML = ordenados.map(m => `<option value="${m.nome}">${m.nome}</option>`).join('');
-        }
-    } else {
-        container.style.display = 'none';
-    }
-}
-
-// Asegurar que el cambio de tipo de usuario actualice la vista
-document.getElementById('userSelect').addEventListener('change', actualizarSelectoresLogin);
 </script>
 </body>
 </html>
