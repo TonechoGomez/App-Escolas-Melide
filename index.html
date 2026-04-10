@@ -251,7 +251,7 @@
     repairDB();
     
  // --- CONFIGURACIÓN CLOUD ---
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwjM0pkD3a6n28z6NvnaMgh9UDMxMjxe9sOrfUlnVq6pqIEkMN7Uspz6o2BrjU0YVx2dA/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFsu6S2XzwQUyI9xgWGZzaIUVzZu0ay7sN0NWHpHI7ddL2QL_4qLcRmWCEoCn-sLk9lw/exec";
 
 
     function closeModal() {
@@ -1191,21 +1191,54 @@ function importarDatos(event) {
 }
 // --- FUNCIONES DE SINCRONIZACIÓN (SOLO UNA VEZ) ---
 
+// --- SISTEMA DE SINCRONIZACIÓN PROFESIONAL ---
+
 async function enviarDatosAWebApp() {
     if (!SCRIPT_URL || SCRIPT_URL.includes("TU_URL")) return;
     try {
-        // Usamos mode: 'cors' y text/plain para que Google Sheets reciba el JSON sin bloqueos
+        console.log("Enviando datos a Google...");
         await fetch(SCRIPT_URL, {
             method: 'POST',
-            mode: 'cors', 
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            mode: 'no-cors', // Mantenemos esto para evitar errores de red, pero enviamos como texto
+            headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify(db)
         });
-        console.log("Datos enviados a Google correctamente");
+        console.log("Sincronización de subida finalizada.");
     } catch (e) {
-        console.error("Error al enviar datos:", e);
+        console.error("Error al enviar a Google:", e);
     }
 }
+
+async function cargarDatosDesdeWebApp() {
+    if (!SCRIPT_URL || SCRIPT_URL.includes("TU_URL")) return; 
+    try {
+        console.log("Descargando datos de Google...");
+        const resp = await fetch(SCRIPT_URL + "?action=read");
+        const data = await resp.json();
+        
+        if (data && Object.keys(data).length > 0) {
+            db = data;
+            localStorage.setItem('melide_db', JSON.stringify(db));
+            // Forzamos el dibujado de todas las tablas con los nuevos datos
+            if (typeof renderAll === 'function') renderAll();
+            console.log("Datos de Google cargados con éxito.");
+        }
+    } catch (e) {
+        console.error("Error al descargar de Google:", e);
+    }
+}
+
+function saveData() {
+    // 1. Guardar localmente
+    localStorage.setItem('melide_db', JSON.stringify(db));
+    // 2. Enviar a la nube
+    enviarDatosAWebApp();
+}
+
+// ESTO ASEGURA QUE AL ABRIR LA WEB, SE CARGUE GOOGLE ANTES QUE NADA
+window.addEventListener('DOMContentLoaded', () => {
+    cargarDatosDesdeWebApp();
+});
 
 async function cargarDatosDesdeWebApp() {
     if (!SCRIPT_URL || SCRIPT_URL.includes("TU_URL")) return; 
