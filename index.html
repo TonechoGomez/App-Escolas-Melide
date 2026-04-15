@@ -251,17 +251,34 @@ function toggleMonitorLogin(role) {
 }
 
 function login() {
+    const pass = document.getElementById('user-pass')?.value; // Asegúrate de tener este input en tu HTML
     userRole = document.getElementById('user-role').value;
     const sel = document.getElementById('id-monitor-login');
     monitorActivo = (userRole === 'monitor' && sel) ? sel.value : 'todos';
-    
+
+    // [VALIDACIÓN DE CLAVES]
+    if (userRole === 'tecnico' && pass !== '1234') { alert('Clave de Técnico incorrecta'); return; }
+    if (userRole === 'monitor' && pass !== '4321') { alert('Clave de Monitor incorrecta'); return; }
+    if (userRole === 'politico' && pass !== '0000') { alert('Clave de Invitado incorrecta'); return; }
+
     const menu = document.getElementById('menu-container');
+    if(!menu) return;
     menu.innerHTML = '';
+    
+    // [DEFINICIÓN DE PERMISOS]
+    // Todos ven Monitores, Actividades, Aulas, Alumnos y Horarios
     const tabs = [
-        {id: 'Monitores', icon: '👥'}, {id: 'Actividades', icon: '🏆'}, 
-        {id: 'Aulas', icon: '🏠'}, {id: 'Alumnos', icon: '🎓'}, {id: 'Horarios', icon: '🗓️'}
+        {id: 'Monitores', icon: '👥'}, 
+        {id: 'Actividades', icon: '🏆'}, 
+        {id: 'Aulas', icon: '🏠'}, 
+        {id: 'Alumnos', icon: '🎓'}, 
+        {id: 'Horarios', icon: '🗓️'}
     ];
-    if (userRole === 'tecnico') tabs.push({id: 'Config', icon: '⚙️'});
+
+    // Solo el Técnico ve el botón de Configuración (Copia de seguridad, etc.)
+    if (userRole === 'tecnico') {
+        tabs.push({id: 'Config', icon: '⚙️'});
+    }
 
     tabs.forEach(tab => {
         const card = document.createElement('div');
@@ -270,6 +287,7 @@ function login() {
         card.innerHTML = `<div style="font-size:2.2rem">${tab.icon}</div><h3>${tab.id}</h3>`;
         menu.appendChild(card);
     });
+
     nav('scr-dash');
 }
 
