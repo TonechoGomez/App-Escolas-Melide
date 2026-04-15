@@ -218,755 +218,154 @@
 </div>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyrKFxBcP1eRh08HiUtvFS6Qas8BPuSe8UXdlH6nr3erg4KYippGK2pTnObgsNnwSZHpA/exec";
-
-// 1. Inicialización de la Base de Datos (Corregida para evitar duplicados)
-window.db = JSON.parse(localStorage.getItem('melide_db')) || { 
-    Monitores: [], 
-    Aulas: [{nome: 'PARROQUIAS', espacios:["MACEDA", "FURELOS", "MOLDES", "GROBAS", "SANTALLA", "SAN MARTIÑO", "SAN SALVADOR"]}], 
-    Actividades: [], 
-    Alumnos: [] 
-};
-var db = window.db;
-
-// 2. VARIABLES GLOBALES Y ESTADO
-let currentSection = '';
-let monitorActivo = 'todos';
-let currentView = 'scr-inicio';
-let userRole = 'tecnico';
-const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Lunes-Miércoles", "Martes-Jueves"];
-
-// 3. AUTO-REPARACIÓN DE DATOS
+<script>
+// [01] REPARACIÓN Y VARIABLES DE ESTADO
 function repairDB() {
-    if (!db.Monitores) db.Monitores = [];
-    if (!db.Aulas) db.Aulas = [];
-    if (!db.Actividades) db.Actividades = [];
-    if (!db.Alumnos) db.Alumnos = [];
-
-    db.Actividades.forEach(a => {
-        if(a.nome) a.nome = a.nome.trim().toUpperCase();
-        if(a.monitor) a.monitor = a.monitor.trim().toUpperCase();
-        if(a.aula) a.aula = a.aula.trim().toUpperCase();
-    });
-    db.Alumnos.forEach(a => {
-        if(a.nome) a.nome = a.nome.trim().toUpperCase();
-        if(a.act) a.act = a.act.trim().toUpperCase();
-    });
-    db.Monitores.forEach(m => {
-        if(m.nome) m.nome = m.nome.trim().toUpperCase();
-    });
+    const sections = ['Monitores', 'Aulas', 'Actividades', 'Alumnos'];
+    sections.forEach(s => { if (!db[s]) db[s] = []; });
     saveData();
 }
 repairDB();
-    
- // --- CONFIGURACIÓN CLOUD ---
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwxpr37HGSUY9O8Uj4OGAOwgkQAAiIYM4zLDplhGxmNz1Brlu0VtV9smmvPnA86gmCkRw/exec";
 
+// [02] NAVEGACIÓN Y ACCESO
+function nav(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const target = document.getElementById(id);
+    if(target) target.classList.add('active');
+    currentView = id;
+    document.getElementById('btn-back-header').style.display = (id === 'scr-inicio') ? 'none' : 'flex';
+}
 
-    function closeModal() {
-        document.getElementById('modal-overlay').classList.remove('active');
-        if(currentSection) filterCurrentData(); 
-    }
+function goBack() {
+    if(currentView === 'scr-edit') nav('scr-dash');
+    else if(currentView === 'scr-dash') nav('scr-inicio');
+}
 
-    function getSorted(array) { 
-        if(!array) return [];
-        return [...array].sort((a, b) => {
-            const n1 = (a.nome || "").toUpperCase();
-            const n2 = (b.nome || "").toUpperCase();
-            return n1.localeCompare(n2, undefined, {numeric: true, sensitivity: 'base'});
-        });
-    }
-
-    // [02] MOTOR DE NAVEGACIÓN Y ACCESO
-	function toggleMonitorLogin() {
-    const role = document.getElementById('user-role').value;
-    const monitorSelect = document.getElementById('login-monitor-select');
-    if (monitorSelect) {
-        monitorSelect.style.display = (role === 'monitor') ? 'block' : 'none';
+function toggleMonitorLogin(role) {
+    const area = document.getElementById('login-monitor-area');
+    if(area) area.style.display = (role === 'monitor') ? 'block' : 'none';
+    if(role === 'monitor') {
+        const sel = document.getElementById('id-monitor-login');
+        if(sel) sel.innerHTML = db.Monitores.map(m => `<option value="${m.nome}">${m.nome}</option>`).join('');
     }
 }
 
-
-    function login() {
+function login() {
     userRole = document.getElementById('user-role').value;
-    const monitorSelect = document.getElementById('id-monitor-login');
-    monitorActivo = (userRole === 'monitor' && monitorSelect) ? monitorSelect.value : 'todos';
-
+    const sel = document.getElementById('id-monitor-login');
+    monitorActivo = (userRole === 'monitor' && sel) ? sel.value : 'todos';
+    
     const menu = document.getElementById('menu-container');
-    if (!menu) return;
     menu.innerHTML = '';
-
-    let tabs = [
-        {id: 'Monitores', icon: '👥'}, 
-        {id: 'Actividades', icon: '🏆'}, 
-        {id: 'Aulas', icon: '🏠'}, 
-        {id: 'Alumnos', icon: '🎓'}, 
-        {id: 'Horarios', icon: '🗓️'}
+    const tabs = [
+        {id: 'Monitores', icon: '👥'}, {id: 'Actividades', icon: '🏆'}, 
+        {id: 'Aulas', icon: '🏠'}, {id: 'Alumnos', icon: '🎓'}, {id: 'Horarios', icon: '🗓️'}
     ];
-
-    if (userRole === 'tecnico') {
-        tabs.push({id: 'Config', icon: '⚙️'});
-    }
+    if (userRole === 'tecnico') tabs.push({id: 'Config', icon: '⚙️'});
 
     tabs.forEach(tab => {
         const card = document.createElement('div');
         card.className = 'menu-card';
-        card.onclick = function() { renderSection(tab.id); };
+        card.onclick = () => renderSection(tab.id);
         card.innerHTML = `<div style="font-size:2.2rem">${tab.icon}</div><h3>${tab.id}</h3>`;
         menu.appendChild(card);
     });
-
     nav('scr-dash');
 }
 
-    function logout() { nav('scr-inicio'); }
-
-    function nav(id) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        currentView = id;
-        document.getElementById('btn-back-header').style.display = (id === 'scr-inicio') ? 'none' : 'flex';
-    }
-
-    function goBack() { 
-        if(currentView === 'scr-edit') nav('scr-dash');
-        else if(currentView === 'scr-dash') nav('scr-inicio');
-    }
-
-    function toggleFS() { 
-        if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(e => console.log(e));
-        else document.exitFullscreen();
-    }
-
-// [03] GESTIÓN DE VISTAS (RENDER)
-    function renderSection(sec) {
+// [03] MOTOR DE RENDERIZADO DINÁMICO
+function renderSection(sec) {
     currentSection = sec;
     const container = document.getElementById('data-container');
     const actions = document.getElementById('section-actions');
-    document.getElementById('global-search').value = '';
-    container.innerHTML = ""; 
-    actions.innerHTML = "";
+    container.innerHTML = ""; actions.innerHTML = "";
+    document.getElementById('search-box-area').style.display = (sec === 'Config' || sec === 'Horarios') ? 'none' : 'block';
 
-    // Si es Configuración, no mostramos buscador ni botón de añadir
-    if (sec === 'Config') {
-        document.getElementById('search-box-area').style.display = 'none';
-        renderConfigView();
-    } 
-    else if (sec === 'Horarios') { 
-        document.getElementById('search-box-area').style.display = 'none';
-        renderHorarioView(); 
-    } 
+    if (sec === 'Config') renderConfigView();
+    else if (sec === 'Horarios') renderHorarioView();
     else {
         if(userRole === 'tecnico') {
             actions.innerHTML = `<button class="btn-add-section" onclick="openFormAdd('${sec}')">+ Añadir ${sec}</button>`;
         }
-        document.getElementById('search-box-area').style.display = 'block';
-        filterCurrentData(); 
+        filterCurrentData();
     }
     nav('scr-edit');
 }
 
-// [04] FILTRADO Y LISTADOS DINÁMICOS
-    function filterCurrentData() {
-    if (currentSection === 'Horarios') return;
+function filterCurrentData() {
     const query = document.getElementById('global-search').value.toUpperCase();
     const container = document.getElementById('data-container');
     container.innerHTML = "";
+    let items = db[currentSection] || [];
 
-    let itemsToRender = [];
-    if (currentSection === 'Alumnos') {
-        const uniqueAlumnos = {};
-        db.Alumnos.forEach(al => {
-            const cleanAlNome = (al.nome || "").trim().toUpperCase();
-            if (!uniqueAlumnos[cleanAlNome]) {
-                uniqueAlumnos[cleanAlNome] = { ...al, acts: [al.act] };
-            } else if(!uniqueAlumnos[cleanAlNome].acts.includes(al.act)) {
-                uniqueAlumnos[cleanAlNome].acts.push(al.act);
-            }
-        });
-        itemsToRender = Object.values(uniqueAlumnos);
-    } else {
-        itemsToRender = db[currentSection] || [];
+    if(userRole === 'monitor' && currentSection === 'Actividades') {
+        items = items.filter(a => a.monitor === monitorActivo);
     }
 
-    getSorted(itemsToRender).filter(item => (item.nome||"").toUpperCase().includes(query)).forEach(item => {
-        const originalIdx = db[currentSection].findIndex(x => x.nome === item.nome);
-        let html = `<div class="item-card" onclick="openDetail('${currentSection}', ${originalIdx})">
-            <button class="btn-del-item" onclick="event.stopPropagation(); deleteItem('${currentSection}', ${originalIdx})">✕</button>
+    items.filter(i => (i.nome||"").toUpperCase().includes(query)).forEach((item, idx) => {
+        let html = `<div class="item-card" onclick="openDetail('${currentSection}', ${idx})">
+            ${userRole === 'tecnico' ? `<button class="btn-del-item" onclick="event.stopPropagation(); deleteItem('${currentSection}', ${idx})">✕</button>` : ''}
             <div class="item-header"><span>${item.nome}</span></div>`;
         
-        if(currentSection === 'Monitores') {
-            html += `<div style="font-size:0.85rem; color:#64748b; margin-top:8px;">Ficha del Monitor</div>`;
-        } else if(currentSection === 'Actividades') {
-            html += `<div style="margin-top:8px; font-size:0.85rem;">⏰ ${item.hora} (${item.dia}) | 👤 ${item.monitor}</div>
+        if(currentSection === 'Actividades') {
+            html += `<div style="margin-top:8px; font-size:0.85rem;">⏰ ${item.hora} (${item.dia})</div>
             <div class="btn-act-group">
-                <button class="btn-act btn-asis" onclick="event.stopPropagation(); openAsistencia('${item.nome.replace(/'/g, "\\'")}')">Pasar Lista</button>
+                <button class="btn-act btn-asis" onclick="event.stopPropagation(); openAsistencia('${item.nome.replace(/'/g, "\\'")}')">Lista</button>
                 <button class="btn-act btn-wapp" onclick="event.stopPropagation(); prepareWhatsApp('${item.nome.replace(/'/g, "\\'")}', '${item.dia}', '${item.hora}')">Aviso 💬</button>
             </div>`;
-        } else if(currentSection === 'Alumnos') {
-            const actsText = item.acts ? item.acts.join(', ') : item.act;
-            html += `<div style="font-size:0.85rem; margin-top:5px; color:#64748b;">📚 ${actsText} <span class="status-badge status-${item.status || 'admitido'}">${item.status || 'admitido'}</span></div>`;
         }
         container.innerHTML += html + `</div>`;
     });
 }
 
-   // --- SISTEMA DE WHATSAPP V121 ---
-// --- SISTEMA DE WHATSAPP MEJORADO ---
-// [05] SISTEMA DE COMUNICACIÓN WHATSAPP
+// [04] SISTEMA DE WHATSAPP V121
 function prepareWhatsApp(actNome, dia, hora) {
     const cleanAct = actNome.trim().toUpperCase();
-    const admitidos = db.Alumnos.filter(a => 
-        (a.act || "").trim().toUpperCase() === cleanAct && 
-        (a.status === 'admitido' || !a.status) &&
-        (a.tlfs && a.tlfs.trim() !== "")
-    );
-
+    const admitidos = db.Alumnos.filter(a => (a.act||"").trim().toUpperCase() === cleanAct && (a.status === 'admitido' || !a.status) && a.tlfs);
     let html = `<h3>Aviso WhatsApp: ${actNome}</h3>`;
     
     if (admitidos.length === 0) {
-        html += `<p style="color:#ef4444; padding:20px; text-align:center;">⚠️ No hay alumnos admitidos con teléfono.</p>`;
+        html += `<p style="color:red; text-align:center;">⚠️ No hay alumnos con teléfono.</p>`;
     } else {
-        // Sección de Envío Rápido (Máximo 20)
-        const lista20 = admitidos.slice(0, 20);
-        html += `
-        <div style="background:#e8f5e9; padding:15px; border-radius:12px; margin-bottom:20px; border:1px solid #25d366;">
-            <p style="margin:0 0 10px 0; color:#1b5e20; font-weight:bold; font-size:0.9rem;">🚀 ENVÍO RÁPIDO (Primeros ${lista20.length})</p>
-            <button class="btn" style="background:#128c7e; margin:0; width:100%;" onclick="sendMassiveWhatsApp('${actNome.replace(/'/g, "\\'")}', '${dia}', '${hora}')">
-                MENSAJE GRUPAL 👥
-            </button>
-            <p style="font-size:0.7rem; color:#1b5e20; margin-top:8px;">* Selecciona a los destinatarios en el siguiente paso de WhatsApp.</p>
-        </div>
-        
-        <p style="font-size:0.8rem; color:gray; font-weight:bold;">ENVIAR INDIVIDUALMENTE:</p>
-        <div style="max-height: 250px; overflow-y: auto;">`;
-        
+        html += `<button class="btn" style="background:#128c7e; width:100%;" onclick="sendMassiveWhatsApp('${actNome.replace(/'/g, "\\'")}', '${dia}', '${hora}')">MENSAJE GRUPAL 👥</button>
+        <div style="max-height: 250px; overflow-y: auto; margin-top:15px;">`;
         admitidos.forEach(al => {
             const numeros = al.tlfs.match(/[679]\d{8}/g); 
-            if (numeros) {
-                numeros.forEach(num => {
-                    html += `
-                    <button class="btn" style="background:#25d366; margin-bottom:8px; text-align:left; display:flex; align-items:center; justify-content:space-between; padding:12px; font-size:0.9rem; width:100%;" 
-                        onclick="sendWhatsApp('${num}', '${actNome.replace(/'/g, "\\'")}', '${dia}', '${hora}')">
-                        <span>📱 ${al.nome}</span>
-                        <span>${num} ➔</span>
-                    </button>`;
-                });
-            }
+            if (numeros) numeros.forEach(num => {
+                html += `<button class="btn" style="background:#25d366; margin-bottom:8px; width:100%;" onclick="sendWhatsApp('${num}', '${actNome.replace(/'/g, "\\'")}', '${dia}', '${hora}')">📱 ${al.nome} (${num})</button>`;
+            });
         });
         html += `</div>`;
     }
-    
-    html += `<button class="btn" onclick="closeModal()" style="margin-top:15px; background:#64748b; width:100%;">CANCELAR</button>`;
-    
-    document.getElementById('modal-body').innerHTML = html;
+    document.getElementById('modal-body').innerHTML = html + `<button class="btn" onclick="closeModal()" style="margin-top:10px; background:#64748b; width:100%;">CANCELAR</button>`;
     document.getElementById('modal-overlay').classList.add('active');
 }
 
 function sendWhatsApp(phone, act, dia, hora) {
-    const cleanPhone = phone.replace(/\D/g, '');
-    const textoBase = `Hola, le escribimos desde el Concello de Melide sobre la actividad ${act}. Le recordamos su horario: ${dia} a las ${hora}.`;
-    
-    const nuevoMsg = prompt("Edita el mensaje individual:", textoBase);
-    
-    if (nuevoMsg !== null && nuevoMsg.trim() !== "") {
-        const msgFinal = encodeURIComponent(nuevoMsg);
-        // Creamos un enlace temporal y lo "pulsamos" por código para saltar el bloqueo
-        const link = document.createElement('a');
-        link.href = `https://wa.me/34${cleanPhone}?text=${msgFinal}`;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        link.click();
-    }
+    const msg = encodeURIComponent(`Hola, le escribimos desde el Concello de Melide sobre la actividad ${act}. Horario: ${dia} a las ${hora}.`);
+    window.open(`https://wa.me/34${phone}?text=${msg}`, '_blank');
 }
 
 function sendMassiveWhatsApp(act, dia, hora) {
-    const textoBase = `Hola, le escribimos desde el Concello de Melide sobre la actividad ${act}. Le recordamos su horario: ${dia} a las ${hora}.`;
-    
-    const nuevoMsg = prompt("Escribe el mensaje para enviar a los admitidos:", textoBase);
-    
-    if (nuevoMsg !== null && nuevoMsg.trim() !== "") {
-        const msgFinal = encodeURIComponent(nuevoMsg);
-        
-        // Usamos el mismo método de enlace simulado para mayor compatibilidad
-        const link = document.createElement('a');
-        link.href = `https://api.whatsapp.com/send?text=${msgFinal}`;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        link.click();
-    }
+    const msg = encodeURIComponent(`Recordatorio actividad ${act}: ${dia} a las ${hora}.`);
+    window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
 }
 
-    // [06] DETALLES Y EDICIÓN (MODALES)
-	function openDetail(sec, idx) {
-        if(sec === 'Monitores') openMonitorEdit(idx);
-        else if(sec === 'Actividades') openActividadDetail(idx);
-        else if(sec === 'Aulas') openAulaDetail(idx);
-        else if(sec === 'Alumnos') openAlumnoDetail(idx);
-    }
-
-    function openActividadDetail(idx) {
-        const act = db.Actividades[idx];
-        const sortedMons = getSorted(db.Monitores);
-        const sortedAulas = getSorted(db.Aulas);
-        const cleanActNome = act.nome.trim().toUpperCase();
-        
-        const alumnos = db.Alumnos.filter(al => (al.act || "").trim().toUpperCase() === cleanActNome).sort((a,b) => {
-            const order = { 'admitido': 1, 'espera': 2, 'baja': 3 };
-            return (order[a.status] || 1) - (order[b.status] || 1);
-        });
-
-        let horaOptions = '<option value="">-- Seleccionar hora --</option>';
-        for(let h=9; h<=23; h++) {
-            let hStr = h.toString().padStart(2, '0') + ':00';
-            horaOptions += `<option value="${hStr}" ${act.hora===hStr?'selected':''}>${hStr}</option>`;
-        }
-
-        document.getElementById('modal-body').innerHTML = `
-            <label>Nombre de la Actividad</label>
-            <input type="text" id="edit-act-name" value="${act.nome}" onchange="updateActName(${idx}, this.value)">
-            <div style="background:#f8fafc; padding:15px; border-radius:15px; margin-top:15px; margin-bottom:15px;">
-                <label>Monitor</label>
-                <select onchange="updateActField(${idx}, 'monitor', this.value)">
-                    <option value="SIN ASIGNAR">-- Sin asignar --</option>
-                    ${sortedMons.map(m => `<option value="${m.nome}" ${act.monitor===m.nome?'selected':''}>${m.nome}</option>`).join('')}
-                </select>
-                <label>Aula / Local</label>
-                <select id="sel-aula-act" onchange="updateActField(${idx}, 'aula', this.value)">
-                    <option value="POR DEFINIR">-- Por definir --</option>
-                    ${sortedAulas.map(a => {
-                        let opts = `<option value="${a.nome}" ${act.aula===a.nome?'selected':''}>${a.nome}</option>`;
-                        if(a.espacios) a.espacios.forEach(e => {
-                            opts += `<option value="${e}" ${act.aula===e?'selected':''}>📍 ${e}</option>`;
-                        });
-                        return opts;
-                    }).join('')}
-                </select>
-                <label>Día</label>
-                <select onchange="updateActField(${idx}, 'dia', this.value)">
-                    ${diasSemana.map(d => `<option value="${d}" ${act.dia===d?'selected':''}>${d}</option>`).join('')}
-                </select>
-                <label>Hora</label>
-                <div style="display:flex; gap:5px; align-items:center;">
-                   <select style="flex:1" onchange="document.getElementById('h-manual').value=this.value; updateActField(${idx}, 'hora', this.value)">
-                       ${horaOptions}
-                   </select>
-                   <input type="text" id="h-manual" style="flex:1" value="${act.hora}" onchange="updateActField(${idx}, 'hora', this.value)" placeholder="O escribe manual...">
-                </div>
-            </div>
-            <textarea id="bulk-al" rows="3" placeholder="Añadir alumnos..."></textarea>
-            <button class="btn" onclick="bulkAdd('${act.nome}', ${idx})">AÑADIR ALUMNOS</button>
-            <div style="margin-top:10px; max-height:200px; overflow:auto;">
-                ${alumnos.map(al => `
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:5px; border-bottom:1px solid #eee;">
-                        <span style="font-size:0.85rem;">
-                           <button onclick="realDeleteAlumno('${al.nome}', ${idx})" style="color:red; background:none; border:none; cursor:pointer; font-weight:bold; margin-right:5px;">✕</button>
-                           ${al.nome}
-                        </span>
-                        <div style="display:flex; align-items:center;">
-                            <span class="status-badge status-${al.status || 'admitido'}">${al.status || 'admitido'}</span>
-                            <select style="width:auto; padding:5px; font-size:0.7rem; margin-left:5px;" onchange="updateAlumnoStatus('${al.nome}', this.value, ${idx})">
-                                <option value="admitido" ${al.status==='admitido'?'selected':''}>ADMITIDO</option>
-                                <option value="espera" ${al.status==='espera'?'selected':''}>ESPERA</option>
-                                <option value="baja" ${al.status==='baja'?'selected':''}>BAJA</option>
-                            </select>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>`;
-        document.getElementById('modal-overlay').classList.add('active');
-    }
-
-    function realDeleteAlumno(nome, actIdx) {
-        if(confirm(`¿Eliminar definitivamente a ${nome}?`)) {
-            const cleanActNome = db.Actividades[actIdx].nome.trim().toUpperCase();
-            db.Alumnos = db.Alumnos.filter(a => !(a.nome === nome && (a.act || "").trim().toUpperCase() === cleanActNome));
-            saveData();
-            openActividadDetail(actIdx);
-        }
-    }
-
-    function updateActName(idx, newName) {
-        const oldName = db.Actividades[idx].nome.trim().toUpperCase();
-        const cleanName = newName.trim().toUpperCase();
-        if(!cleanName) return;
-        db.Actividades[idx].nome = cleanName;
-        db.Alumnos.forEach(al => { if((al.act || "").trim().toUpperCase() === oldName) al.act = cleanName; });
-        saveData();
-    }
-
-    function updateActField(idx, field, val) { 
-        db.Actividades[idx][field] = (typeof val === 'string') ? val.trim().toUpperCase() : val; 
-        saveData(); 
-    }
-
-    function openAulaDetail(idx) {
-        const a = db.Aulas[idx];
-        const sortedActs = getSorted(db.Actividades);
-        if(a.nome === 'PARROQUIAS') { renderParroquiasView(idx); return; }
-        let html = `<h3>Lugar: ${a.nome}</h3>
-            <div style="background:#f1f5f9; padding:15px; border-radius:15px;">
-                <label>Vincular Actividad Existente</label>
-                <select id="a-act-vinc">${sortedActs.map(ac=>`<option value="${ac.nome}">${ac.nome}</option>`).join('')}</select>
-                <button class="btn" onclick="vincularActDesdeAula('${a.nome}', ${idx})">ASIGNAR A ESTA AULA</button>
-            </div><br>
-            <div style="overflow-x:auto"><table><tr><th>Día</th><th>Programación</th></tr>`;
-            diasSemana.slice(0,5).forEach(d => {
-                const acts = db.Actividades.filter(ac => (ac.aula === a.nome && (ac.dia === d || ac.dia.includes(d))));
-                html += `<tr><td style="font-weight:bold">${d}</td><td>`;
-                acts.forEach(ac => {
-                    html += `<div class="sched-item">${ac.hora} - ${ac.nome} (${ac.monitor}) <button class="btn-rm-sched" onclick="removeFromSched('${ac.nome}', ${idx})">✕</button></div>`;
-                });
-                html += `</td></tr>`;
-            });
-            html += `</table></div>`;
-        document.getElementById('modal-body').innerHTML = html;
-        document.getElementById('modal-overlay').classList.add('active');
-    }
-
-    function renderParroquiasView(idx) {
-        const a = db.Aulas[idx];
-        let html = `<h3>Gestión de Parroquias / Locales</h3>
-            <label>Añadir Nuevo Local Social (uno por línea)</label>
-            <textarea id="bulk-parroquias" rows="3"></textarea>
-            <button class="btn" onclick="addParroquiasEspacios(${idx})">AÑADIR LOCALES</button>
-            <hr>
-            <h4>Listado de Locales y Asignaciones</h4>
-            <div id="locales-list">`;
-        (a.espacios || []).forEach(loc => {
-            const actVinc = db.Actividades.find(ac => ac.aula === loc);
-            html += `<div style="background:#f8fafc; padding:15px; border-radius:12px; margin-bottom:10px; border:1px solid #ddd;">
-                <div style="display:flex; justify-content:space-between; font-weight:bold;">
-                    <span>📍 ${loc}</span>
-                    <button onclick="deleteLocal('${loc}', ${idx})" style="color:red; background:none; border:none;">Eliminar</button>
-                </div>
-                <div style="font-size:0.8rem; margin-top:5px;">
-                    ${actVinc ? `<b>${actVinc.nome}</b>: ${actVinc.dia} (${actVinc.hora}) - ${actVinc.monitor}` : '<i style="color:gray">Sin actividad asignada</i>'}
-                </div>
-                <button class="btn" style="padding:8px; font-size:0.8rem; background:var(--melide-accent)" onclick="openVincularLocal('${loc}', ${idx})">Gestionar Actividad en este Local</button>
-            </div>`;
-        });
-        html += `</div>`;
-        document.getElementById('modal-body').innerHTML = html;
-        document.getElementById('modal-overlay').classList.add('active');
-    }
-
-    function openVincularLocal(localNome, idxAula) {
-        const sortedMons = getSorted(db.Monitores);
-        const sortedActs = getSorted(db.Actividades);
-        const actVinc = db.Actividades.find(ac => ac.aula === localNome);
-        
-        let horaOptions = '<option value="">-- Seleccionar hora --</option>';
-        for(let h=9; h<=23; h++) {
-            let hStr = h.toString().padStart(2, '0') + ':00';
-            horaOptions += `<option value="${hStr}" ${actVinc?.hora===hStr?'selected':''}>${hStr}</option>`;
-        }
-
-        let html = `<h4>Gestionar Local: ${localNome}</h4>`;
-        
-        if (actVinc) {
-            const idxAct = db.Actividades.indexOf(actVinc);
-            html += `<div style="background:#f8fafc; padding:15px; border-radius:15px; margin-bottom:15px;">
-                <label>Actividad vinculada: <b>${actVinc.nome}</b></label>
-                <label>Monitor</label>
-                <select onchange="updateActField(${idxAct}, 'monitor', this.value)">
-                    <option value="SIN ASIGNAR">-- Sin asignar --</option>
-                    ${sortedMons.map(m => `<option value="${m.nome}" ${actVinc.monitor===m.nome?'selected':''}>${m.nome}</option>`).join('')}
-                </select>
-                <label>Día</label>
-                <select onchange="updateActField(${idxAct}, 'dia', this.value)">
-                    ${diasSemana.map(d => `<option value="${d}" ${actVinc.dia===d?'selected':''}>${d}</option>`).join('')}
-                </select>
-                <label>Hora</label>
-                <div style="display:flex; gap:5px; align-items:center;">
-                   <select style="flex:1" onchange="document.getElementById('hl-manual').value=this.value; updateActField(${idxAct}, 'hora', this.value)">
-                       ${horaOptions}
-                   </select>
-                   <input type="text" id="hl-manual" style="flex:1" value="${actVinc.hora}" onchange="updateActField(${idxAct}, 'hora', this.value)" placeholder="Hora manual...">
-                </div>
-                <button class="btn" style="background:#ef4444; margin-top:10px;" onclick="removeFromSched('${actVinc.nome}', ${idxAula}); openVincularLocal('${localNome}', ${idxAula})">DESVINCULAR ACTIVIDAD</button>
-            </div>`;
-        } else {
-            html += `<label>Vincular Actividad a este Local</label>
-            <select id="loc-act">${sortedActs.map(ac=>`<option value="${ac.nome}">${ac.nome}</option>`).join('')}</select>
-            <button class="btn" onclick="vincularActDesdeAula('${localNome}', ${idxAula})">ASIGNAR A ESTE LOCAL</button>`;
-        }
-        
-        html += `<button class="btn" style="background:#64748b" onclick="renderParroquiasView(${idxAula})">VOLVER A LISTADO</button>`;
-        document.getElementById('modal-body').innerHTML = html;
-    }
-
-    function vincularActDesdeAula(aulaNome, aulaIdx) {
-        const actNome = document.getElementById('a-act-vinc')?.value || document.getElementById('loc-act')?.value;
-        const cleanAct = (actNome || "").trim().toUpperCase();
-        if(!cleanAct) return;
-
-        let actLibre = db.Actividades.find(a => a.nome.trim().toUpperCase() === cleanAct && (a.aula === 'POR DEFINIR' || !a.aula));
-        if(actLibre) {
-            actLibre.aula = aulaNome.trim().toUpperCase();
-        } else {
-            const original = db.Actividades.find(a => a.nome.trim().toUpperCase() === cleanAct);
-            if(original) {
-                const copia = JSON.parse(JSON.stringify(original));
-                copia.aula = aulaNome.trim().toUpperCase();
-                db.Actividades.push(copia);
-            }
-        }
-        saveData(); 
-        if(db.Aulas[aulaIdx].nome === 'PARROQUIAS') openVincularLocal(aulaNome, aulaIdx); 
-        else openAulaDetail(aulaIdx); 
-    }
-
-    // HORARIOS: REESTRUCTURADO PARA VACIAR EL CUADRO ANTES DE DIBUJAR
-    // [07] SISTEMA DE HORARIOS Y CUADRANTES
-	function renderHorarioView() {
-        const container = document.getElementById('data-container');
-        container.innerHTML = `
-            <div style="background:rgba(255,255,255,0.1); padding:15px; border-radius:15px; margin-bottom:15px;">
-                <label style="color:white">Filtrar listado por:</label>
-                <select id="h-filter" onchange="updateHorarioFilter()">
-                    <option value="todo">-- Ver Todo --</option>
-                    <optgroup label="Monitores">${getSorted(db.Monitores).map(m=>`<option value="m:${m.nome}">${m.nome}</option>`).join('')}</optgroup>
-                    <optgroup label="Aulas">${getSorted(db.Aulas).map(au=>{
-                        let o = `<option value="l:${au.nome}">${au.nome}</option>`;
-                        if(au.espacios) au.espacios.forEach(e => o += `<option value="l:${e}">📍 ${e}</option>`);
-                        return o;
-                    }).join('')}</optgroup>
-                </select>
-            </div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; align-items: start;" id="horario-grid-container">
-                <div>
-                   <h3 style="text-align:center; color:white; margin-bottom:10px;">Listado Filtrado</h3>
-                   <div id="horario-resultado"></div>
-                </div>
-                <div>
-                   <h3 style="text-align:center; color:white; margin-bottom:10px;">Cuadrante General</h3>
-                   <div id="cuadrante-general"></div>
-                </div>
-            </div>
-        `;
-        setTimeout(updateHorarioFilter, 50);
-    }
-
-  function renderHorarioView() {
-    const container = document.getElementById('data-container');
-    // Creamos una estructura de rejilla de dos columnas (50% cada una)
-    container.innerHTML = `
-        <div style="background:rgba(255,255,255,0.1); padding:15px; border-radius:15px; margin-bottom:15px; width:100%; box-sizing:border-box;">
-            <label style="color:white">Filtrar listado por:</label>
-            <select id="h-filter" onchange="updateHorarioFilter()">
-                <option value="todo">-- Ver Todo (Solo General) --</option>
-                <optgroup label="Monitores">${getSorted(db.Monitores).map(m=>`<option value="m:${m.nome}">${m.nome}</option>`).join('')}</optgroup>
-                <optgroup label="Aulas">${getSorted(db.Aulas).map(au=>{
-                    let o = `<option value="l:${au.nome}">${au.nome}</option>`;
-                    if(au.espacios) au.espacios.forEach(e => o += `<option value="l:${e}">📍 ${e}</option>`);
-                    return o;
-                }).join('')}</optgroup>
-            </select>
-        </div>
-        <div id="horario-layout" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; align-items: start;">
-            <div id="col-filtro" style="display:none;">
-               <div id="horario-resultado"></div>
-            </div>
-            <div id="col-general">
-               <div id="cuadrante-general"></div>
-            </div>
-        </div>
-    `;
-    setTimeout(updateHorarioFilter, 50);
-}
-
-function updateHorarioFilter() {
-    const filter = document.getElementById('h-filter')?.value || 'todo';
-    const res = document.getElementById('horario-resultado');
-    const gen = document.getElementById('cuadrante-general');
-    const colFiltro = document.getElementById('col-filtro');
-    const layout = document.getElementById('horario-layout');
-
-    if (!res || !gen || !layout) return;
-
-    const aplicarEstiloCaja = (div, alto) => {
-        div.style.width = "100%";
-        div.style.height = alto;
-        div.style.overflow = "auto";   
-        div.style.background = "white";
-        div.style.borderRadius = "8px";
-        div.style.border = "3px solid #005696";
-        div.style.boxSizing = "border-box";
-    };
-
-    if (filter !== 'todo') {
-        // ACTIVAR DOBLE COLUMNA
-        layout.style.gridTemplateColumns = "1fr 1fr";
-        colFiltro.style.display = "block";
-        aplicarEstiloCaja(res, "80vh"); // Tamaño igual al general
-        aplicarEstiloCaja(gen, "80vh");
-    } else {
-        // SOLO GENERAL
-        layout.style.gridTemplateColumns = "1fr";
-        colFiltro.style.display = "none";
-        aplicarEstiloCaja(gen, "80vh");
-    }
-
-    const horasVisuales = ["09:00", "10:00", "11:00", "12:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00"];
-    const diasPrincipales = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
-
-    const generarTabla = (listaActividades, titulo, color) => {
-        let html = `<div style="background:${color}; color:white; padding:10px; font-weight:bold; font-size:13px; text-align:center; position:sticky; top:0; left:0; z-index:25;">${titulo}</div>`;
-        
-        // El min-width de 600px asegura que no se rompan las celdas de 100px de alto
-        html += `<table style="width:100%; min-width:600px; border-collapse:collapse; background:white; color:black; table-layout: fixed;">
-            <thead>
-                <tr style="background:#f1f5f9; color:#005696; position:sticky; top:33px; z-index:24;">
-                    <th style="width:60px; padding:6px; border:1px solid #ddd; font-size:10px; position:sticky; left:0; background:#f1f5f9; z-index:26;">HORA</th>`;
-        diasPrincipales.forEach(d => html += `<th style="width:108px; padding:6px; border:1px solid #ddd; font-size:10px;">${d.toUpperCase()}</th>`);
-        html += `</tr></thead><tbody>`;
-
-        horasVisuales.forEach(h => {
-            html += `<tr>
-                <td style="font-weight:bold; background:#f8fafc; color:#005696; text-align:center; border:1px solid #ddd; font-size:11px; padding:0; height:100px; position:sticky; left:0; z-index:23;">${h}</td>`;
-            
-            diasPrincipales.forEach(d => {
-                const items = listaActividades.filter(ac => {
-                    if (!ac || !ac.nome) return false;
-                    const coincideDia = ac.dia === d || (ac.dia && ac.dia.includes(d));
-                    const coincideHora = ac.hora && ac.hora.startsWith(h.substring(0,2));
-                    return coincideDia && coincideHora;
-                });
-
-                html += `<td style="vertical-align:top; border:1px solid #ddd; padding:3px; height:100px;">`;
-                items.forEach(i => {
-                    html += `
-                    <div onclick="goToActivity(${i.originalIndex})" 
-                         style="background:#0ea5e9; color:white; padding:4px; border-radius:5px; font-size:9px; cursor:pointer; line-height:1.1; border:1px solid #0284c7; margin-bottom:3px; overflow:hidden; min-height:30px;">
-                        <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${i.nome}</div>
-                        <div style="font-size:8px; opacity:0.9;">${i.aula}</div>
-                    </div>`;
-                });
-                html += `</td>`;
-            });
-            html += `</tr>`;
-        });
-        return html + `</tbody></table>`;
-    };
-
-    let dataConIndex = db.Actividades.map((a, idx) => ({...a, originalIndex: idx}))
-                        .filter(a => a.aula && a.aula !== 'POR DEFINIR');
-
-    gen.innerHTML = generarTabla(dataConIndex, "CUADRANTE GENERAL", "#475569");
-
-    if (filter !== 'todo') {
-        const parts = filter.split(':');
-        const val = (parts[1] || "").trim().toUpperCase();
-        let filtrados = dataConIndex.filter(a => {
-            if (parts[0] === 'm') return (a.monitor || "").trim().toUpperCase() === val;
-            if (parts[0] === 'l') return (a.aula || "").trim().toUpperCase() === val;
-            return false;
-        });
-        res.innerHTML = generarTabla(filtrados, "VISTA FILTRADA", "#005696");
-    }
-}
-
-function goToActivity(index) {
-    if (typeof renderSection === 'function') {
-        renderSection('Horarios');
-        setTimeout(() => {
-            if (typeof openActividadDetail === 'function') {
-                openActividadDetail(index);
-            }
-        }, 150);
-    }
-}
-
-    function openMonitorEdit(idx) {
-        const m = db.Monitores[idx];
-        const mActs = getSorted(db.Actividades.filter(a => a.monitor.trim().toUpperCase() === m.nome.trim().toUpperCase()));
-        const sortedActs = getSorted(db.Actividades);
-        document.getElementById('modal-body').innerHTML = `<h3>Monitor: ${m.nome}</h3>
-            <label>Nombre</label><input type="text" id="m-nome" value="${m.nome || ''}">
-            <label>Apellidos</label><input type="text" id="m-ape" value="${m.apellidos || ''}">
-            <label>Teléfono</label><input type="tel" id="m-tlf" value="${m.tlf || ''}">
-            <label>Email</label><input type="email" id="m-mail" value="${m.email || ''}">
-            <button class="btn" onclick="saveMonitorChanges(${idx})">GUARDAR DATOS</button>
-            <hr><h4>Vincular Actividad</h4>
-            <select id="m-add-act"><option value="">-- Seleccionar --</option>${sortedActs.map(a => `<option value="${a.nome}">${a.nome}</option>`).join('')}</select>
-            <button class="btn" style="background:var(--melide-accent)" onclick="assignActToMon(${idx})">VINCULAR</button>
-            <div style="margin-top:15px;">${mActs.map(a => `<div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee;"><span>🏆 ${a.nome}</span><button style="color:red; border:none; background:none;" onclick="unassignAct('${a.nome}', ${idx})">✕</button></div>`).join('')}</div>`;
-        document.getElementById('modal-overlay').classList.add('active');
-    }
-
-    function saveMonitorChanges(idx) {
-        const oldName = db.Monitores[idx].nome.trim().toUpperCase();
-        const newName = document.getElementById('m-nome').value.trim().toUpperCase();
-        db.Monitores[idx] = { 
-            nome: newName, 
-            apellidos: (document.getElementById('m-ape').value||"").trim().toUpperCase(), 
-            tlf: document.getElementById('m-tlf').value, 
-            email: document.getElementById('m-mail').value 
-        };
-        db.Actividades.forEach(act => { if(act.monitor.trim().toUpperCase() === oldName) act.monitor = newName; });
-        saveData(); closeModal();
-    }
-
-    function assignActToMon(idx) {
-        const actNome = document.getElementById('m-add-act').value.trim().toUpperCase();
-        const act = db.Actividades.find(a => a.nome.trim().toUpperCase() === actNome);
-        if(act) { act.monitor = db.Monitores[idx].nome.trim().toUpperCase(); saveData(); openMonitorEdit(idx); }
-    }
-
-   
-// --- SISTEMA DE ASISTENCIA V121 (CORREGIDO) ---
-// [08] CONTROL DE ASISTENCIA
+// [05] SISTEMA DE ASISTENCIA
 function openAsistencia(actNome) {
-    console.log("Abriendo lista extendida para:", actNome);
     const cleanAct = actNome.trim().toUpperCase();
-    
-    // Obtenemos todos los alumnos de esta actividad
-    const todos = db.Alumnos.filter(a => (a.act || "").trim().toUpperCase() === cleanAct);
-    
-    // Los separamos por grupos
-    const admitidos = todos.filter(a => a.status === 'admitido' || !a.status);
-    const espera = todos.filter(a => a.status === 'espera');
-    const baja = todos.filter(a => a.status === 'baja');
-
-    const hoy = new Date().toLocaleDateString();
-    let html = `<h3>Lista: ${actNome}</h3><p style="margin-top:-10px; color:gray;">${hoy}</p>`;
-    
-    // SECCIÓN 1: ADMITIDOS (Con opción a pasar lista)
-    html += `<div style="margin-top:15px; border-left:4px solid #2563eb; padding-left:10px; font-weight:bold; color:#2563eb;">ADMITIDOS</div>`;
-    if(admitidos.length === 0) {
-        html += `<p style="color:gray; padding:10px; font-size:0.9rem;">No hay alumnos admitidos.</p>`;
-    } else {
-        admitidos.forEach(al => {
-            html += `
-            <div class="asistencia-row" onclick="toggleAsisRow(this)" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #f1f5f9; cursor: pointer; background: white; margin-bottom: 4px; border-radius: 8px;">
-                <span style="font-weight: 500;">${al.nome}</span>
-                <span class="status-badge" style="background:#f1f5f9; color:#64748b; font-size: 0.7rem; padding: 4px 8px; border-radius: 4px; font-weight: bold;">PENDIENTE</span>
-            </div>`;
-        });
-    }
-
-    // SECCIÓN 2: LISTA DE ESPERA (Solo lectura)
-    if(espera.length > 0) {
-        html += `<div style="margin-top:20px; border-left:4px solid #ca8a04; padding-left:10px; font-weight:bold; color:#ca8a04;">LISTA DE ESPERA</div>`;
-        espera.forEach(al => {
-            html += `<div style="padding:10px; border-bottom:1px solid #fef9c3; color:#854d0e; font-size:0.9rem;">• ${al.nome}</div>`;
-        });
-    }
-
-    // SECCIÓN 3: BAJAS (Solo lectura)
-    if(baja.length > 0) {
-        html += `<div style="margin-top:20px; border-left:4px solid #dc2626; padding-left:10px; font-weight:bold; color:#dc2626;">BAJAS</div>`;
-        baja.forEach(al => {
-            html += `<div style="padding:10px; border-bottom:1px solid #fee2e2; color:#991b1b; font-size:0.9rem; text-decoration:line-through;">• ${al.nome}</div>`;
-        });
-    }
-    
-    html += `<button class="btn" onclick="closeModal()" style="margin-top:25px; background:#475569;">CERRAR</button>`;
-    
-    document.getElementById('modal-body').innerHTML = html;
+    const alumnos = db.Alumnos.filter(a => (a.act || "").trim().toUpperCase() === cleanAct);
+    let html = `<h3>Lista: ${actNome}</h3>`;
+    alumnos.forEach(al => {
+        html += `<div class="asistencia-row" onclick="toggleAsisRow(this)" style="display:flex; justify-content:space-between; padding:12px; border-bottom:1px solid #eee; background:white; margin-bottom:4px; border-radius:8px; cursor:pointer;">
+            <span>${al.nome}</span>
+            <span class="status-badge" style="background:#f1f5f9; color:#64748b; font-size:0.7rem; padding:4px; border-radius:4px; font-weight:bold;">PENDIENTE</span>
+        </div>`;
+    });
+    document.getElementById('modal-body').innerHTML = html + `<button class="btn" onclick="closeModal()" style="margin-top:15px; background:#475569; width:100%;">CERRAR</button>`;
     document.getElementById('modal-overlay').classList.add('active');
 }
+
 function toggleAsisRow(el) {
     const badge = el.querySelector('.status-badge');
     const estados = [
@@ -974,229 +373,83 @@ function toggleAsisRow(el) {
         { txt: 'PRESENTE', bg: '#dcfce7', col: '#166534' },
         { txt: 'AUSENTE', bg: '#fee2e2', col: '#991b1b' }
     ];
-    
-    let actualIdx = estados.findIndex(e => e.txt === badge.innerText);
-    let sig = estados[(actualIdx + 1) % estados.length];
-    
-    badge.innerText = sig.txt;
-    badge.style.background = sig.bg;
-    badge.style.color = sig.col;
-}
-// --- FIN SISTEMA ASISTENCIA ---
-    // [09] LÓGICA DE MARCADO (ASISTENCIA)
-	function toggleAsis(alNome, fecha, act) {
-        const cleanAct = act.trim().toUpperCase();
-        const cleanAl = alNome.trim().toUpperCase();
-        const al = db.Alumnos.find(a => a.nome.trim().toUpperCase() === cleanAl && (a.act || "").trim().toUpperCase() === cleanAct);
-        if(al) {
-            if(!al.asistencias) al.asistencias = {};
-            const cur = al.asistencias[fecha];
-            al.asistencias[fecha] = cur === 'presente' ? 'falta' : (cur === 'falta' ? 'pendiente' : 'presente');
-            saveData(); openAsistencia(act);
-        }
-    }
-
-   // [10] FICHA ESPECÍFICA DE ALUMNOS
-   function openAlumnoDetail(idx) {
-    const al = db.Alumnos[idx];
-    const cleanNome = al.nome.trim().toUpperCase();
-    const misActs = db.Alumnos.filter(a => a.nome.trim().toUpperCase() === cleanNome).map(a => a.act);
-    
-    let tlfsArray = al.tlfs ? al.tlfs.split('|').filter(t => t.trim() !== "") : [""];
-    if (tlfsArray.length === 0) tlfsArray = [""];
-
-    let html = `<h3>Ficha: ${al.nome}</h3>
-        <p style="font-size:0.9rem; color:#64748b; margin-bottom:15px;"><strong>Inscrito en:</strong> ${misActs.join(', ')}</p>
-        
-        <label>Listado de Teléfonos / Contactos</label>
-        <div id="tlf-container">`;
-    
-    tlfsArray.forEach((t, i) => {
-        html += `
-        <div style="display:flex; gap:5px; margin-bottom:8px;">
-            <input type="text" class="alumno-tlf-input" value="${t}" placeholder="Ej: 600000000 (Padre)">
-            <button onclick="this.parentElement.remove()" style="background:#fee2e2; color:#ef4444; border:none; border-radius:8px; padding:0 12px; cursor:pointer;">✕</button>
-        </div>`;
-    });
-
-    html += `</div>
-        <button class="btn" style="background:#0ea5e9; margin-top:5px; padding:10px; font-size:0.8rem; width:100%;" onclick="addTlfField()">+ AÑADIR OTRO TELÉFONO</button>
-        
-        <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
-        <button class="btn" onclick="saveAlumnoTlfs('${al.nome.replace(/'/g, "\\'")}')">GUARDAR CAMBIOS</button>
-        <button class="btn" style="background:#64748b; width:100%;" onclick="closeModal()">CANCELAR</button>`;
-    
-    document.getElementById('modal-body').innerHTML = html;
-    document.getElementById('modal-overlay').classList.add('active');
+    let idx = estados.findIndex(e => e.txt === badge.innerText);
+    let sig = estados[(idx + 1) % estados.length];
+    badge.innerText = sig.txt; badge.style.background = sig.bg; badge.style.color = sig.col;
 }
 
-// --- NUEVAS FUNCIONES DE CONTROL DE TELÉFONOS ---
-
-function addTlfField() {
-    const container = document.getElementById('tlf-container');
-    const div = document.createElement('div');
-    div.style = "display:flex; gap:5px; margin-bottom:8px;";
-    div.innerHTML = `
-        <input type="text" class="alumno-tlf-input" value="" placeholder="Nuevo teléfono..." style="flex:1;">
-        <button onclick="this.parentElement.remove()" style="background:#fee2e2; color:#ef4444; border:none; border-radius:8px; padding:0 12px; cursor:pointer; font-weight:bold;">✕</button>
-    `;
-    container.appendChild(div);
-}
-
-function saveAlumnoTlfs(nome) {
-    const cleanNome = nome.trim().toUpperCase();
-    const inputs = document.querySelectorAll('.alumno-tlf-input');
-    
-    // Unimos todos los teléfonos con el separador |
-    const tlfsNuevos = Array.from(inputs)
-        .map(i => i.value.trim())
-        .filter(t => t !== "")
-        .join('|'); 
-
-    // Buscamos al alumno en todas sus inscripciones (actividades) para actualizarlo
-    db.Alumnos.forEach(a => {
-        if (a.nome.trim().toUpperCase() === cleanNome) {
-            a.tlfs = tlfsNuevos;
-        }
-    });
-
-    saveData();         // Guarda en la base de datos local
-    closeModal();       // Cierra la ficha
-    filterCurrentData(); // Refresca la lista de alumnos en pantalla
-    alert("Datos de contacto actualizados correctamente");
-}
-
-    function updateAlumnoStatus(nome, status, actIdx) {
-        const cleanNome = nome.trim().toUpperCase();
-        const cleanAct = actIdx !== null ? db.Actividades[actIdx].nome.trim().toUpperCase() : null;
-        const al = db.Alumnos.find(a => a.nome.trim().toUpperCase() === cleanNome && (cleanAct ? (a.act || "").trim().toUpperCase() === cleanAct : true));
-        if(al) { al.status = status; saveData(); if(actIdx !== null) openActividadDetail(actIdx); }
-    }
-
-    function openFormAdd(tipo) {
-        document.getElementById('modal-body').innerHTML = `<h3>Añadir ${tipo}</h3><textarea id="bulk-names" rows="6" placeholder="Un nombre por línea..."></textarea><button class="btn" onclick="processAdd('${tipo}')">GUARDAR</button>`;
-        document.getElementById('modal-overlay').classList.add('active');
-    }
-
-    function processAdd(tipo) {
-        document.getElementById('bulk-names').value.split('\n').forEach(l => {
-            const n = l.trim().toUpperCase();
-            if(n) {
-                if(tipo==='Monitores') db.Monitores.push({nome:n, apellidos:'', tlf:'', email:''});
-                else if(tipo==='Aulas') db.Aulas.push({nome:n, espacios:[]});
-                else if(tipo==='Actividades') db.Actividades.push({nome:n, monitor:'SIN ASIGNAR', aula:'POR DEFINIR', hora:'10:00', dia:'Lunes'});
-                else if(tipo==='Alumnos') db.Alumnos.push({nome:n, act:'SIN ASIGNAR', status:'admitido', asistencias:{}, tlfs:''});
-            }
-        });
-        saveData(); closeModal();
-    }
-
-    function bulkAdd(actNome, idx) {
-        const cleanActNome = actNome.trim().toUpperCase();
-        document.getElementById('bulk-al').value.split('\n').forEach(n => { 
-            const nomeLimpio = n.trim().toUpperCase();
-            if(nomeLimpio) db.Alumnos.push({ nome: nomeLimpio, act: cleanActNome, status: 'admitido', asistencias: {}, tlfs:'' }); 
-        });
-        saveData(); openActividadDetail(idx);
-    }
-
-    function deleteItem(sec, idx) { if(confirm('¿Borrar?')) { db[sec].splice(idx,1); saveData(); filterCurrentData(); } }
-    
-    function addParroquiasEspacios(idx) {
-        const a = db.Aulas[idx]; if(!a.espacios) a.espacios = [];
-        document.getElementById('bulk-parroquias').value.split('\n').forEach(val => { 
-            const cleanVal = val.trim().toUpperCase();
-            if(cleanVal && !a.espacios.includes(cleanVal)) a.espacios.push(cleanVal); 
-        });
-        saveData(); renderParroquiasView(idx);
-    }
-    
-    function deleteLocal(nome, idxAula) {
-        if(confirm(`¿Borrar local ${nome}?`)) { 
-            db.Aulas[idxAula].espacios = db.Aulas[idxAula].espacios.filter(e => e !== nome); 
-            saveData(); renderParroquiasView(idxAula); 
-        }
-    }
-
-    function removeFromSched(actNome, aulaIdx) {
-        const cleanAct = actNome.trim().toUpperCase();
-        const act = db.Actividades.find(a => (a.nome || "").trim().toUpperCase() === cleanAct);
-        if(act) { act.aula = 'POR DEFINIR'; saveData(); if(db.Aulas[aulaIdx].nome === 'PARROQUIAS') renderParroquiasView(aulaIdx); else openAulaDetail(aulaIdx); }
-    }
-
-    function unassignAct(actNome, idx) {
-        const cleanAct = actNome.trim().toUpperCase();
-        const act = db.Actividades.find(a => (a.nome || "").trim().toUpperCase() === cleanAct);
-        if(act) { act.monitor = 'SIN ASIGNAR'; saveData(); openMonitorEdit(idx); }
-    }
-// [11] CONFIGURACIÓN Y BACKUP
-function renderConfigView() {
+// [06] HORARIOS (CUADRANTE DOBLE)
+function renderHorarioView() {
     const container = document.getElementById('data-container');
     container.innerHTML = `
-        <div class="card" style="padding:20px; text-align:center; max-width:500px; margin: 0 auto;">
-            <h2 style="color:var(--melide-primary); margin-top:0;">Copia de Seguridad</h2>
-            <p style="color:#475569; font-size:14px; margin-bottom:20px;">
-                Usa estas opciones para mover tus datos entre dispositivos (PC, Móvil o Tablet).
-            </p>
-            <div style="display:flex; flex-direction:column; gap:15px;">
-                <button onclick="exportarDatos()" style="background:#10b981; color:white; padding:15px; border:none; border-radius:10px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; font-size:16px;">
-                    📥 EXPORTAR DATOS (.json)
-                </button>
-                <div style="border:2px dashed #cbd5e1; padding:20px; border-radius:10px; background:#f8fafc;">
-                    <label style="display:block; margin-bottom:10px; font-weight:bold; color:var(--text-main);">IMPORTAR ARCHIVO:</label>
-                    <input type="file" id="importFile" accept=".json" onchange="importarDatos(event)" style="font-size:12px; width:100%;">
-                </div>
-            </div>
-            <hr style="margin:30px 0; border:0; border-top:1px solid #e2e8f0;">
-            <button onclick="if(confirm('¿BORRAR TODO?')){localStorage.clear(); location.reload();}" 
-                    style="background:#ef4444; color:white; padding:10px; border:none; border-radius:8px; font-size:12px; opacity:0.6; cursor:pointer;">
-                Borrar base de datos local
-            </button>
+        <div style="background:rgba(255,255,255,0.1); padding:15px; border-radius:15px; margin-bottom:15px; width:100%;">
+            <label style="color:white">Filtrar listado por:</label>
+            <select id="h-filter" onchange="updateHorarioFilter()" style="width:100%">
+                <option value="todo">-- Ver Todo (Solo General) --</option>
+                <optgroup label="Monitores">${db.Monitores.map(m=>`<option value="m:${m.nome}">${m.nome}</option>`).join('')}</optgroup>
+                <optgroup label="Aulas">${db.Aulas.map(au=>`<option value="l:${au.nome}">${au.nome}</option>`).join('')}</optgroup>
+            </select>
         </div>
-    `;
-}
-function exportarDatos() {
-    const dataStr = JSON.stringify(db, null, 2);
-    const blob = new Blob([dataStr], {type: "application/json"});
-    const url = URL.createObjectURL(blob);
-    
-    const nombreArchivo = 'backup_escolas_' + new Date().toISOString().slice(0,10) + '.json';
-    const linkElement = document.createElement('a');
-    linkElement.href = url;
-    linkElement.download = nombreArchivo;
-    linkElement.click();
-    
-    setTimeout(() => URL.revokeObjectURL(url), 100);
+        <div id="horario-layout" style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+            <div id="col-filtro" style="display:none;"><div id="horario-resultado"></div></div>
+            <div id="col-general"><div id="cuadrante-general"></div></div>
+        </div>`;
+    setTimeout(updateHorarioFilter, 50);
 }
 
-function importarDatos(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            let contenido = e.target.result;
-            // Limpia caracteres invisibles que rompen el JSON
-            contenido = contenido.replace(/^\uFEFF/, ""); 
-            const datos = JSON.parse(contenido);
-            if (datos && typeof datos === 'object') {
-                if (confirm('¿Cargar estos datos?')) {
-                    db = datos;
-                    if(!db.Alumnos) db.Alumnos = [];
-                    db.Alumnos.forEach(al => {
-                        if (al.phoneList && Array.isArray(al.phoneList)) al.tlfs = al.phoneList.join(' | ');
-                        if (al.tlfs === undefined) al.tlfs = "";
-                    });
-                    saveData();
-                    alert('¡IMPORTACIÓN CORRECTA!');
-                    location.reload();
-                }
-            }
-        } catch (err) {
-            alert('ERROR: El archivo no es válido o tiene un formato de texto incorrecto.');
-        }
-    };
-    reader.readAsText(file);
+function updateHorarioFilter() {
+    const filter = document.getElementById('h-filter').value;
+    const res = document.getElementById('horario-resultado');
+    const gen = document.getElementById('cuadrante-general');
+    const layout = document.getElementById('horario-layout');
+    
+    layout.style.gridTemplateColumns = (filter === 'todo') ? "1fr" : "1fr 1fr";
+    document.getElementById('col-filtro').style.display = (filter === 'todo') ? "none" : "block";
+
+    const data = db.Actividades.map((a, idx) => ({...a, originalIndex: idx}));
+    gen.innerHTML = generarTablaHorario(data, "GENERAL");
+    if(filter !== 'todo') {
+        const [pref, val] = filter.split(':');
+        const filtrados = data.filter(a => pref === 'm' ? a.monitor === val : a.aula === val);
+        res.innerHTML = generarTablaHorario(filtrados, "FILTRADO");
+    }
+}
+
+function generarTablaHorario(lista, titulo) {
+    const horas = ["09:00", "10:00", "11:00", "12:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00"];
+    const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
+    let html = `<div style="background:#005696; color:white; padding:8px; text-align:center; font-weight:bold;">${titulo}</div>
+    <div style="background:white; overflow:auto; height:70vh;"><table style="width:100%; border-collapse:collapse; color:black; font-size:10px;">
+    <tr><th>H</th>${dias.map(d=>`<th>${d[0]}</th>`).join('')}</tr>`;
+    
+    horas.forEach(h => {
+        html += `<tr><td style="background:#eee; font-weight:bold;">${h}</td>`;
+        dias.forEach(d => {
+            const acts = lista.filter(a => a.dia.includes(d) && a.hora.startsWith(h.substring(0,2)));
+            html += `<td style="border:1px solid #ddd; height:40px; vertical-align:top;">
+                ${acts.map(a => `<div style="background:#0ea5e9; color:white; padding:2px; margin:1px; border-radius:3px;">${a.nome}</div>`).join('')}
+            </td>`;
+        });
+        html += `</tr>`;
+    });
+    return html + `</table></div>`;
+}
+
+// [07] FUNCIONES AUXILIARES
+function openDetail(sec, idx) {
+    if(sec === 'Actividades') openActividadDetail(idx);
+    else if(sec === 'Monitores') openMonitorEdit(idx);
+    else alert("Función de edición en desarrollo para " + sec);
+}
+
+function closeModal() { document.getElementById('modal-overlay').classList.remove('active'); }
+function saveData() {
+    localStorage.setItem('melide_db', JSON.stringify(window.db));
+    if(typeof enviarDatosAWebApp === 'function') enviarDatosAWebApp();
+}
+function toggleFS() { 
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
 }
 // --- SISTEMA DE SINCRONIZACIÓN FINAL ---
 
