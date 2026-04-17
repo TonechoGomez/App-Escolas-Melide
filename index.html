@@ -3,513 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Gestión Deportiva - Melide</title>
+    <title>Melide Deportes - Gestión</title>
     <style>
         :root {
             --melide-primary: #005696;
             --melide-dark: #003d6b;
             --melide-accent: #0ea5e9;
             --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            --card-bg: rgba(255, 255, 255, 0.95);
+            --card-bg: #ffffff;
             --text-main: #1e293b;
         }
 
         body { 
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
             background: var(--bg-gradient); 
-            color: white; 
-            margin: 0; 
-            height: 100vh; 
-            overflow: hidden; 
+            color: white; margin: 0; height: 100vh; 
+            display: flex; flex-direction: column; overflow: hidden; 
         }
 
         header { 
-            background: rgba(0, 86, 150, 0.9); 
-            backdrop-filter: blur(10px);
-            color: white; 
-            padding: 1rem; 
-            text-align: center; 
-            box-shadow: 0 4px 30px rgba(0,0,0,0.3);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            position: sticky;
-            top: 0;
-            z-index: 100;
+            background: var(--melide-primary); color: white; padding: 0 15px; 
+            display: none; align-items: center; justify-content: space-between;
+            height: 60px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            position: relative; z-index: 10;
         }
 
-        .top-nav-btns {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            display: flex;
-            gap: 10px;
-        }
+        .screen { display: none; flex: 1; padding: 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .screen.active { display: block; }
 
-        .btn-mini {
-            background: rgba(255,255,255,0.25);
-            border: 1px solid rgba(255,255,255,0.4);
-            color: white;
-            padding: 10px 14px;
-            border-radius: 8px;
-            font-size: 1.1rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 44px;
-            min-height: 44px;
-        }
-
-        .container { 
-            padding: 15px; 
-            height: calc(100vh - 75px); 
-            overflow-y: auto; 
-            box-sizing: border-box;
+        /* Estilos de tarjetas del menú */
+        .menu-card {
+            background: var(--card-bg);
+            color: var(--text-main);
+            padding: 20px;
+            border-radius: 18px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
             display: flex;
             flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            aspect-ratio: 1 / 1;
         }
 
-        .screen { display: none; height: 100%; flex-direction: column; }
-        .screen.active { display: flex; animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-        
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .menu-card:active { transform: scale(0.95); }
 
-        .welcome-card { 
-            background: var(--card-bg); padding: 30px; border-radius: 24px; color: var(--text-main);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); width: 95%; max-width: 450px; margin: auto;
+        .btn {
+            background: var(--melide-primary);
+            color: white; border: none; padding: 12px 20px;
+            border-radius: 12px; font-weight: bold; width: 100%;
+            cursor: pointer; font-size: 1rem; margin-top: 10px;
         }
 
-        .grid-menu { 
-            display: grid; 
-            grid-template-columns: repeat(2, 1fr); 
-            gap: 15px; 
-            padding-bottom: 20px;
+        input, select, textarea {
+            width: 100%; padding: 12px; margin: 10px 0;
+            border-radius: 10px; border: 1px solid #ccc;
+            font-size: 1rem; box-sizing: border-box;
         }
 
-        .menu-card { 
-            background: rgba(255,255,255,0.1); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.2);
-            padding: 25px 10px; border-radius: 20px; text-align: center; transition: 0.3s; cursor: pointer;
-        }
-        .menu-card:active { transform: scale(0.95); background: var(--melide-accent); }
-        .menu-card h3 { margin: 10px 0 0; font-size: 1rem; }
-
-        .btn-logout {
-            background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3);
-            padding: 15px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; width: 100%; max-width: 300px;
-            margin: 20px auto; display: block;
-        }
-
-        .search-input { 
-            width: 100%; padding: 14px; border-radius: 12px; border: none; 
-            background: rgba(255,255,255,0.95); color: var(--text-main); font-size: 1rem;
-            margin-bottom: 15px;
-        }
-
-        .data-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; padding-bottom: 30px; }
-        
-        .item-card { 
-            background: var(--card-bg); border-radius: 15px; color: var(--text-main);
-            border-left: 6px solid var(--melide-primary);
-            position: relative; padding: 18px; cursor: pointer;
-        }
-
-        .item-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 1.1rem; }
-
-        .btn-act-group { display: flex; gap: 8px; margin-top: 12px; }
-        .btn-act { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; font-size: 0.8rem; }
-        .btn-asis { background: #0ea5e9; }
-        .btn-wapp { background: #25d366; }
-
-        .btn-del-item {
-            position: absolute; right: 8px; top: 8px; background: #fee2e2; color: #ef4444;
-            border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-        }
-
-        .btn-add-section {
-            background: var(--melide-accent); color: white; border: none; padding: 16px;
-            border-radius: 12px; font-weight: bold; margin-bottom: 15px; cursor: pointer; width: 100%; font-size: 1rem;
-        }
-
-        .sub-view-overlay {
+        /* Modales */
+        #modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.8); z-index: 1000; display: none; align-items: center; justify-content: center;
-            padding: 15px;
+            background: rgba(0,0,0,0.8); display: none; align-items: center;
+            justify-content: center; z-index: 100;
         }
-        .sub-view-overlay.active { display: flex; }
-
+        #modal-overlay.active { display: flex; }
         .modal-content {
-            background: white; width: 100%; max-width: 600px; max-height: 90vh; 
-            border-radius: 24px; color: var(--text-main); padding: 25px; overflow-y: auto;
-        }
-
-        .asistencia-row { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #f1f5f9; margin-bottom: 8px; cursor: pointer; }
-        
-        .btn { width: 100%; padding: 16px; border: none; border-radius: 12px; background: var(--melide-primary); color: white; font-weight: bold; margin-top: 15px; font-size: 1rem; }
-        select, textarea, input { width: 100%; padding: 14px; border-radius: 10px; border: 1px solid #cbd5e1; font-family: inherit; margin-top: 5px; box-sizing: border-box; font-size: 1rem; }
-        
-        label { display: block; margin-top: 12px; font-size: 0.85rem; font-weight: bold; color: #64748b; }
-
-        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; background: white; border-radius: 10px; overflow: hidden; }
-        th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: center; }
-        th { background: #f1f5f9; color: var(--melide-primary); }
-        
-        .sched-item { position: relative; font-size: 0.7rem; padding: 5px; border-radius: 5px; background: #e0f2fe; color: #0369a1; border-left: 3px solid var(--melide-accent); margin-bottom: 3px; }
-        .btn-rm-sched { position: absolute; top: 0; right: 0; background: #ef4444; color: white; border: none; border-radius: 0 4px 0 4px; font-size: 0.6rem; padding: 2px 4px; cursor: pointer; }
-
-        .status-badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-left: 5px; text-transform: uppercase; font-weight: bold; }
-        .status-admitido { background: #dcfce7; color: #166534; }
-        .status-espera { background: #fef9c3; color: #854d0e; }
-        .status-baja { background: #fee2e2; color: #991b1b; }
-
-        @media (max-width: 600px) {
-            header h1 { font-size: 1rem; text-align: left; padding-left: 5px; }
-            .top-nav-btns { gap: 5px; right: 5px; }
-            .btn-mini { padding: 8px 10px; min-width: 38px; min-height: 38px; font-size: 1rem; }
+            background: white; color: #1e293b; padding: 25px;
+            border-radius: 20px; width: 90%; max-width: 400px;
+            max-height: 85vh; overflow-y: auto;
         }
     </style>
 </head>
 <body>
 
-<header>
-    <h1 style="margin:0; letter-spacing: 1px;">CONCELLO DE <strong>MELIDE</strong></h1>
-    <div class="top-nav-btns" id="top-nav">
-        <button class="btn-mini" id="btn-back-header" onclick="goBack()" style="display:none;" title="Volver">←</button>
-        <button class="btn-mini" onclick="toggleFS()" title="Pantalla Completa">⛶</button>
-    </div>
-</header>
+    <header id="main-header">
+        <button onclick="volverAtras()" style="background:none; border:none; color:white; font-size:1.5rem;">←</button>
+        <h1 id="header-title" style="font-size:1.1rem; margin:0; font-weight:800; letter-spacing:1px; text-transform: uppercase;">PANEL DE GESTIÓN</h1>
+        <button onclick="irInicio()" style="background:none; border:none; color:white; font-size:1.5rem;">🏠</button>
+    </header>
 
-<div class="container" id="main-container">
-    <section id="scr-inicio" class="screen active">
-        <div class="welcome-card">
-            <h2 style="margin-top:0; color: var(--melide-primary); text-align: center;">Acceso Gestión</h2>
-            <label>Tipo de Usuario</label>
-            <select id="user-role" onchange="toggleMonitorLogin(this.value)">
-                <option value="tecnico">Técnico Municipal</option>
-                <option value="monitor">Monitor / Profesor</option>
-            </select>
-            <div id="login-monitor-area" style="display:none;">
-                <label>Seleccionar Monitor</label>
-                <select id="id-monitor-login"></select>
+    <div id="scr-inicio" class="screen active" style="display:flex; align-items:center; justify-content:center;">
+        <div style="background:white; color:var(--text-main); padding:30px; border-radius:20px; width:85%; max-width:350px; text-align:center; box-shadow:0 10px 25px rgba(0,0,0,0.3);">
+            <img src="https://www.concellodemelide.org/images/logo.png" style="width:120px; margin-bottom:20px;">
+            <h2 style="margin:0 0 20px 0; color:var(--melide-primary); font-size:1.4rem;">ACCESO GESTIÓN</h2>
+            
+            <div style="text-align:left; margin-bottom:15px;">
+                <label style="font-size:0.75rem; font-weight:bold; color:#64748b;">PERFIL</label>
+                <select id="user-role" style="width:100%; margin-top:5px;">
+                    <option value="tecnico">TÉCNICO DEPORTES</option>
+                    <option value="monitor">MONITOR</option>
+                    <option value="politico">CONCELLEIRO/A</option>
+                </select>
             </div>
-            <button class="btn" onclick="login()">ENTRAR</button>
+
+            <div style="text-align:left; margin-bottom:20px;">
+                <label style="font-size:0.75rem; font-weight:bold; color:#64748b;">CONTRASEÑA</label>
+                <input type="password" id="user-pass" placeholder="••••" 
+                       onkeypress="if(event.key === 'Enter') login()"
+                       style="text-align:center; letter-spacing:5px; width:100%; padding:10px; box-sizing:border-box; color: black !important; background: white !important;">
+            </div>
+
+            <button class="btn" onclick="login()" style="margin-top:10px; height:50px; width:100%;">ENTRAR</button>
         </div>
-    </section>
-
-    <section id="scr-dash" class="screen">
-        <div class="grid-menu" id="menu-container"></div>
-        <button class="btn-logout" onclick="logout()">CERRAR SESIÓN</button>
-    </section>
-
-    <section id="scr-edit" class="screen">
-        <div class="search-container" id="search-box-area">
-            <input type="text" id="global-search" class="search-input" placeholder="🔍 Buscar..." oninput="filterCurrentData()">
-        </div>
-        <div id="section-actions"></div>
-        <div id="data-container" class="data-grid"></div>
-    </section>
-</div>
-
-<div id="modal-overlay" class="sub-view-overlay" onclick="closeModal()">
-    <div class="modal-content" onclick="event.stopPropagation()">
-        <button style="float:right; border:none; background:none; font-size:1.8rem;" onclick="closeModal()">✕</button>
-        <div id="modal-body"></div>
     </div>
-</div>
 
-<script>
-<script>
-// [01] REPARACIÓN Y VARIABLES DE ESTADO
-function repairDB() {
-    const sections = ['Monitores', 'Aulas', 'Actividades', 'Alumnos'];
-    sections.forEach(s => { if (!db[s]) db[s] = []; });
-    saveData();
-}
-repairDB();
+    <div id="scr-dash" class="screen">
+        <div id="menu-container" style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:10px;">
+            </div>
+    </div>
 
-// [02] NAVEGACIÓN Y ACCESO
-function nav(id) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    const target = document.getElementById(id);
-    if(target) target.classList.add('active');
-    currentView = id;
-    document.getElementById('btn-back-header').style.display = (id === 'scr-inicio') ? 'none' : 'flex';
-}
+    <div id="scr-edit" class="screen">
+        <div id="section-actions"></div>
+        <div id="data-container"></div>
+    </div>
 
-function goBack() {
-    if(currentView === 'scr-edit') nav('scr-dash');
-    else if(currentView === 'scr-dash') nav('scr-inicio');
-}
-
-function toggleMonitorLogin(role) {
-    const area = document.getElementById('login-monitor-area');
-    if(area) area.style.display = (role === 'monitor') ? 'block' : 'none';
-    if(role === 'monitor') {
-        const sel = document.getElementById('id-monitor-login');
-        if(sel) sel.innerHTML = db.Monitores.map(m => `<option value="${m.nome}">${m.nome}</option>`).join('');
-    }
-}
-
-function login() {
-    const pass = document.getElementById('user-pass')?.value; // Asegúrate de tener este input en tu HTML
-    userRole = document.getElementById('user-role').value;
-    const sel = document.getElementById('id-monitor-login');
-    monitorActivo = (userRole === 'monitor' && sel) ? sel.value : 'todos';
-
-    // [VALIDACIÓN DE CLAVES]
-    if (userRole === 'tecnico' && pass !== '1234') { alert('Clave de Técnico incorrecta'); return; }
-    if (userRole === 'monitor' && pass !== '4321') { alert('Clave de Monitor incorrecta'); return; }
-    if (userRole === 'politico' && pass !== '0000') { alert('Clave de Invitado incorrecta'); return; }
-
-    const menu = document.getElementById('menu-container');
-    if(!menu) return;
-    menu.innerHTML = '';
-    
-    // [DEFINICIÓN DE PERMISOS]
-    // Todos ven Monitores, Actividades, Aulas, Alumnos y Horarios
-    const tabs = [
-        {id: 'Monitores', icon: '👥'}, 
-        {id: 'Actividades', icon: '🏆'}, 
-        {id: 'Aulas', icon: '🏠'}, 
-        {id: 'Alumnos', icon: '🎓'}, 
-        {id: 'Horarios', icon: '🗓️'}
-    ];
-
-    // Solo el Técnico ve el botón de Configuración (Copia de seguridad, etc.)
-    if (userRole === 'tecnico') {
-        tabs.push({id: 'Config', icon: '⚙️'});
-    }
-
-    tabs.forEach(tab => {
-        const card = document.createElement('div');
-        card.className = 'menu-card';
-        card.onclick = () => renderSection(tab.id);
-        card.innerHTML = `<div style="font-size:2.2rem">${tab.icon}</div><h3>${tab.id}</h3>`;
-        menu.appendChild(card);
-    });
-
-    nav('scr-dash');
-}
-
-// [03] MOTOR DE RENDERIZADO DINÁMICO
-function renderSection(sec) {
-    currentSection = sec;
-    const container = document.getElementById('data-container');
-    const actions = document.getElementById('section-actions');
-    container.innerHTML = ""; actions.innerHTML = "";
-    document.getElementById('search-box-area').style.display = (sec === 'Config' || sec === 'Horarios') ? 'none' : 'block';
-
-    if (sec === 'Config') renderConfigView();
-    else if (sec === 'Horarios') renderHorarioView();
-    else {
-        if(userRole === 'tecnico') {
-            actions.innerHTML = `<button class="btn-add-section" onclick="openFormAdd('${sec}')">+ Añadir ${sec}</button>`;
-        }
-        filterCurrentData();
-    }
-    nav('scr-edit');
-}
-
-function filterCurrentData() {
-    const query = document.getElementById('global-search').value.toUpperCase();
-    const container = document.getElementById('data-container');
-    container.innerHTML = "";
-    let items = db[currentSection] || [];
-
-    if(userRole === 'monitor' && currentSection === 'Actividades') {
-        items = items.filter(a => a.monitor === monitorActivo);
-    }
-
-    items.filter(i => (i.nome||"").toUpperCase().includes(query)).forEach((item, idx) => {
-        let html = `<div class="item-card" onclick="openDetail('${currentSection}', ${idx})">
-            ${userRole === 'tecnico' ? `<button class="btn-del-item" onclick="event.stopPropagation(); deleteItem('${currentSection}', ${idx})">✕</button>` : ''}
-            <div class="item-header"><span>${item.nome}</span></div>`;
-        
-        if(currentSection === 'Actividades') {
-            html += `<div style="margin-top:8px; font-size:0.85rem;">⏰ ${item.hora} (${item.dia})</div>
-            <div class="btn-act-group">
-                <button class="btn-act btn-asis" onclick="event.stopPropagation(); openAsistencia('${item.nome.replace(/'/g, "\\'")}')">Lista</button>
-                <button class="btn-act btn-wapp" onclick="event.stopPropagation(); prepareWhatsApp('${item.nome.replace(/'/g, "\\'")}', '${item.dia}', '${item.hora}')">Aviso 💬</button>
-            </div>`;
-        }
-        container.innerHTML += html + `</div>`;
-    });
-}
-
-// [04] SISTEMA DE WHATSAPP V121
-function prepareWhatsApp(actNome, dia, hora) {
-    const cleanAct = actNome.trim().toUpperCase();
-    const admitidos = db.Alumnos.filter(a => (a.act||"").trim().toUpperCase() === cleanAct && (a.status === 'admitido' || !a.status) && a.tlfs);
-    let html = `<h3>Aviso WhatsApp: ${actNome}</h3>`;
-    
-    if (admitidos.length === 0) {
-        html += `<p style="color:red; text-align:center;">⚠️ No hay alumnos con teléfono.</p>`;
-    } else {
-        html += `<button class="btn" style="background:#128c7e; width:100%;" onclick="sendMassiveWhatsApp('${actNome.replace(/'/g, "\\'")}', '${dia}', '${hora}')">MENSAJE GRUPAL 👥</button>
-        <div style="max-height: 250px; overflow-y: auto; margin-top:15px;">`;
-        admitidos.forEach(al => {
-            const numeros = al.tlfs.match(/[679]\d{8}/g); 
-            if (numeros) numeros.forEach(num => {
-                html += `<button class="btn" style="background:#25d366; margin-bottom:8px; width:100%;" onclick="sendWhatsApp('${num}', '${actNome.replace(/'/g, "\\'")}', '${dia}', '${hora}')">📱 ${al.nome} (${num})</button>`;
-            });
-        });
-        html += `</div>`;
-    }
-    document.getElementById('modal-body').innerHTML = html + `<button class="btn" onclick="closeModal()" style="margin-top:10px; background:#64748b; width:100%;">CANCELAR</button>`;
-    document.getElementById('modal-overlay').classList.add('active');
-}
-
-function sendWhatsApp(phone, act, dia, hora) {
-    const msg = encodeURIComponent(`Hola, le escribimos desde el Concello de Melide sobre la actividad ${act}. Horario: ${dia} a las ${hora}.`);
-    window.open(`https://wa.me/34${phone}?text=${msg}`, '_blank');
-}
-
-function sendMassiveWhatsApp(act, dia, hora) {
-    const msg = encodeURIComponent(`Recordatorio actividad ${act}: ${dia} a las ${hora}.`);
-    window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
-}
-
-// [05] SISTEMA DE ASISTENCIA
-function openAsistencia(actNome) {
-    const cleanAct = actNome.trim().toUpperCase();
-    const alumnos = db.Alumnos.filter(a => (a.act || "").trim().toUpperCase() === cleanAct);
-    let html = `<h3>Lista: ${actNome}</h3>`;
-    alumnos.forEach(al => {
-        html += `<div class="asistencia-row" onclick="toggleAsisRow(this)" style="display:flex; justify-content:space-between; padding:12px; border-bottom:1px solid #eee; background:white; margin-bottom:4px; border-radius:8px; cursor:pointer;">
-            <span>${al.nome}</span>
-            <span class="status-badge" style="background:#f1f5f9; color:#64748b; font-size:0.7rem; padding:4px; border-radius:4px; font-weight:bold;">PENDIENTE</span>
-        </div>`;
-    });
-    document.getElementById('modal-body').innerHTML = html + `<button class="btn" onclick="closeModal()" style="margin-top:15px; background:#475569; width:100%;">CERRAR</button>`;
-    document.getElementById('modal-overlay').classList.add('active');
-}
-
-function toggleAsisRow(el) {
-    const badge = el.querySelector('.status-badge');
-    const estados = [
-        { txt: 'PENDIENTE', bg: '#f1f5f9', col: '#64748b' },
-        { txt: 'PRESENTE', bg: '#dcfce7', col: '#166534' },
-        { txt: 'AUSENTE', bg: '#fee2e2', col: '#991b1b' }
-    ];
-    let idx = estados.findIndex(e => e.txt === badge.innerText);
-    let sig = estados[(idx + 1) % estados.length];
-    badge.innerText = sig.txt; badge.style.background = sig.bg; badge.style.color = sig.col;
-}
-
-// [06] HORARIOS (CUADRANTE DOBLE)
-function renderHorarioView() {
-    const container = document.getElementById('data-container');
-    container.innerHTML = `
-        <div style="background:rgba(255,255,255,0.1); padding:15px; border-radius:15px; margin-bottom:15px; width:100%;">
-            <label style="color:white">Filtrar listado por:</label>
-            <select id="h-filter" onchange="updateHorarioFilter()" style="width:100%">
-                <option value="todo">-- Ver Todo (Solo General) --</option>
-                <optgroup label="Monitores">${db.Monitores.map(m=>`<option value="m:${m.nome}">${m.nome}</option>`).join('')}</optgroup>
-                <optgroup label="Aulas">${db.Aulas.map(au=>`<option value="l:${au.nome}">${au.nome}</option>`).join('')}</optgroup>
-            </select>
+    <div id="modal-overlay">
+        <div class="modal-content">
+            <div id="modal-body"></div>
+            <button class="btn" onclick="closeModal()" style="background:#475569; margin-top:15px;">CERRAR</button>
         </div>
-        <div id="horario-layout" style="display: grid; grid-template-columns: 1fr; gap: 20px;">
-            <div id="col-filtro" style="display:none;"><div id="horario-resultado"></div></div>
-            <div id="col-general"><div id="cuadrante-general"></div></div>
-        </div>`;
-    setTimeout(updateHorarioFilter, 50);
-}
+    </div>
 
-function updateHorarioFilter() {
-    const filter = document.getElementById('h-filter').value;
-    const res = document.getElementById('horario-resultado');
-    const gen = document.getElementById('cuadrante-general');
-    const layout = document.getElementById('horario-layout');
-    
-    layout.style.gridTemplateColumns = (filter === 'todo') ? "1fr" : "1fr 1fr";
-    document.getElementById('col-filtro').style.display = (filter === 'todo') ? "none" : "block";
+    <script src="config.js"></script>
+    <script src="vistas.js"></script>
+    <script src="seguridad.js"></script>
+    <script src="instalaciones.js"></script>
+    <script src="monitores.js"></script>
+    <script src="actividades.js"></script>
+    <script src="alumnos.js"></script>
+    <script src="cuadrantes.js"></script>
+    <script src="sincronizacion.js"></script>
+    <script src="comunicacion.js"></script>
 
-    const data = db.Actividades.map((a, idx) => ({...a, originalIndex: idx}));
-    gen.innerHTML = generarTablaHorario(data, "GENERAL");
-    if(filter !== 'todo') {
-        const [pref, val] = filter.split(':');
-        const filtrados = data.filter(a => pref === 'm' ? a.monitor === val : a.aula === val);
-        res.innerHTML = generarTablaHorario(filtrados, "FILTRADO");
-    }
-}
-
-function generarTablaHorario(lista, titulo) {
-    const horas = ["09:00", "10:00", "11:00", "12:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00"];
-    const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
-    let html = `<div style="background:#005696; color:white; padding:8px; text-align:center; font-weight:bold;">${titulo}</div>
-    <div style="background:white; overflow:auto; height:70vh;"><table style="width:100%; border-collapse:collapse; color:black; font-size:10px;">
-    <tr><th>H</th>${dias.map(d=>`<th>${d[0]}</th>`).join('')}</tr>`;
-    
-    horas.forEach(h => {
-        html += `<tr><td style="background:#eee; font-weight:bold;">${h}</td>`;
-        dias.forEach(d => {
-            const acts = lista.filter(a => a.dia.includes(d) && a.hora.startsWith(h.substring(0,2)));
-            html += `<td style="border:1px solid #ddd; height:40px; vertical-align:top;">
-                ${acts.map(a => `<div style="background:#0ea5e9; color:white; padding:2px; margin:1px; border-radius:3px;">${a.nome}</div>`).join('')}
-            </td>`;
-        });
-        html += `</tr>`;
-    });
-    return html + `</table></div>`;
-}
-
-// [07] FUNCIONES AUXILIARES
-function openDetail(sec, idx) {
-    if(sec === 'Actividades') openActividadDetail(idx);
-    else if(sec === 'Monitores') openMonitorEdit(idx);
-    else alert("Función de edición en desarrollo para " + sec);
-}
-
-function closeModal() { document.getElementById('modal-overlay').classList.remove('active'); }
-function saveData() {
-    localStorage.setItem('melide_db', JSON.stringify(window.db));
-    if(typeof enviarDatosAWebApp === 'function') enviarDatosAWebApp();
-}
-function toggleFS() { 
-    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-    else document.exitFullscreen();
-}
-// --- SISTEMA DE SINCRONIZACIÓN FINAL ---
-
-async function enviarDatosAWebApp() {
-    if (!window.SCRIPT_URL || SCRIPT_URL.includes("TU_URL")) return;
-    try {
-        await fetch(SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors', 
-            headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify(window.db)
-        });
-        console.log("Nube actualizada.");
-    } catch (e) { console.error("Error al subir:", e); }
-}
-
-async function cargarDatosDesdeWebApp() {
-    if (!window.SCRIPT_URL || SCRIPT_URL.includes("TU_URL")) return; 
-    try {
-        console.log("Buscando datos en Google...");
-        const resp = await fetch(SCRIPT_URL);
-        const data = await resp.json();
-        if (data && Object.keys(data).length > 0) {
-            window.db = data;
-            db = data;
-            localStorage.setItem('melide_db', JSON.stringify(window.db));
-            
-            // Refrescar vistas y activar el botón de entrar
-            if (typeof renderAll === 'function') renderAll();
-            if (typeof toggleMonitorSelect === 'function') toggleMonitorSelect();
-            
-            console.log("Sincronización completa.");
-        }
-    } catch (e) { console.warn("Iniciando con datos locales."); }
-}
-
-function saveData() {
-    localStorage.setItem('melide_db', JSON.stringify(window.db));
-    enviarDatosAWebApp();
-}
-
-window.addEventListener('load', cargarDatosDesdeWebApp);
-</script>
 </body>
 </html>
