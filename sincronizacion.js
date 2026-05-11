@@ -54,28 +54,29 @@ function enviarDatosAWebApp() {
 /**
  * Función especial para la sección de Configuración
  */
-function mostrarConfiguracion() {
+function mostrarPanelNube() {
     const container = document.getElementById('data-container');
     const actions = document.getElementById('section-actions');
     
-    actions.innerHTML = "";
+    actions.innerHTML = `<h2 style="color:white; margin:0;">☁️ SINCRONIZACIÓN NUBE</h2>`;
     
+    container.style.display = "block"; 
     container.innerHTML = `
-        <div class="menu-card" style="text-align:left;">
-            <h3 style="color:var(--melide-primary);">Estado de la Nube</h3>
-            <p style="font-size:0.8rem;">Los datos se guardan automáticamente en este dispositivo.</p>
+        <div style="background:white; color:#1e293b; padding:30px; border-radius:20px; max-width:500px; margin:auto; box-shadow:0 10px 25px rgba(0,0,0,0.3);">
+            <h3 style="color:#005696; margin-top:0;">Estado de la Conexión</h3>
+            <p style="font-size:0.9rem; color:#64748b;">Usa el botón azul para enviar las parroquias y datos de este ordenador a todos los monitores.</p>
             
-            <button onclick="forzarSincro()" style="background:#0ea5e9;">Subir a la nube ahora</button>
-            <button onclick="exportarCopiaSeguridad()" style="background:#64748b;">Descargar copia (JSON)</button>
+            <button onclick="forzarSincro()" style="width:100%; background:#0284c7; color:white; padding:15px; border:none; border-radius:12px; font-weight:bold; cursor:pointer; font-size:1.1rem; margin-bottom:10px;">☁️ SUBIR A LA NUBE AHORA</button>
             
-            <hr style="margin:20px 0; opacity:0.2;">
+            <button onclick="exportarCopiaSeguridad()" style="width:100%; background:#64748b; color:white; padding:10px; border:none; border-radius:12px; cursor:pointer; margin-bottom:20px;">Descargar copia manual (JSON)</button>
             
-            <h3 style="color:#ef4444;">Zona Peligrosa</h3>
-            <button onclick="borrarTodo()" style="background:#ef4444;">BORRAR TODOS LOS DATOS</button>
+            <div style="border-top:1px solid #eee; pt:20px; margin-top:20px;">
+                <h3 style="color:#ef4444; font-size:1rem;">Zona Peligrosa</h3>
+                <button onclick="borrarTodo()" style="width:100%; background:#fee2e2; color:#ef4444; padding:10px; border:1px solid #fca5a5; border-radius:12px; cursor:pointer; font-weight:bold;">BORRAR TODO ESTE DISPOSITIVO</button>
+            </div>
         </div>
     `;
 }
-
 function forzarSincro() {
     alert("Iniciando subida a Google Sheets...");
     enviarDatosAWebApp();
