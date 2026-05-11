@@ -86,7 +86,7 @@ function verSeccion(seccion) {
         case 'instalaciones': mostrarAulas(); break;
         case 'alumnos': mostrarAlumnos(); break;
         case 'cuadrantes': mostrarCuadrantes(); break;
-        // CAMBIO QUIRÚRGICO: Llamamos a mostrarDatos() para ver los cajones naranjas de backup
-        case 'configuracion': if(typeof mostrarDatos === 'function') mostrarDatos(); break;
+      case 'configuracion': mostrarConfiguracion(); break;
+            
     }
 }
