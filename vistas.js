@@ -2,32 +2,6 @@
 // MÓDULO: CONFIGURACIÓN E ESTADÍSTICAS (datos.js)
 // ==========================================
 
-function mostrarConfiguracion() {
-    const container = document.getElementById('data-container');
-    const actions = document.getElementById('section-actions');
-    
-    if (!container || !actions) return;
-
-    actions.innerHTML = `<h2 style="color:white; margin:0;">⚙️ CONFIGURACIÓN DO SISTEMA</h2>`;
-    
-    // Diseño de los dos cajones principales
-    container.style.display = "grid";
-    container.style.gridTemplateColumns = "repeat(auto-fit, minmax(300px, 1fr))";
-    container.style.gap = "20px";
-    container.innerHTML = `
-        <div onclick="verPanelEstadisticas()" style="background:white; color:#005696; padding:40px 20px; border-radius:20px; text-align:center; cursor:pointer; box-shadow:0 10px 25px rgba(0,0,0,0.2); transition: transform 0.2s;">
-            <span style="font-size: 4rem;">📊</span>
-            <div style="font-weight:bold; font-size:1.4rem; margin-top:15px;">ESTADÍSTICAS</div>
-            <div style="font-size:0.9rem; color:#64748b; margin-top:10px;">Asistencia xeral e por actividade</div>
-        </div>
-
-        <div onclick="verPanelDatos()" style="background:white; color:#005696; padding:40px 20px; border-radius:20px; text-align:center; cursor:pointer; box-shadow:0 10px 25px rgba(0,0,0,0.2); transition: transform 0.2s;">
-            <span style="font-size: 4rem;">💾</span>
-            <div style="font-weight:bold; font-size:1.4rem; margin-top:15px;">DATOS</div>
-            <div style="font-size:0.9rem; color:#64748b; margin-top:10px;">Gardar, exportar e importar copias</div>
-        </div>
-    `;
-}
 
 // --- PANEL DE ESTADÍSTICAS ---
 function verPanelEstadisticas() {
