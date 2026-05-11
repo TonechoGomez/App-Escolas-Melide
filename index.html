@@ -7,15 +7,11 @@
     <style>
         :root {
             --melide-primary: #005696;
-            --melide-dark: #003d6b;
-            --melide-accent: #0ea5e9;
             --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            --card-bg: #ffffff;
-            --text-main: #1e293b;
         }
 
         body { 
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
+            font-family: 'Segoe UI', sans-serif; 
             background: var(--bg-gradient); 
             color: white; margin: 0; height: 100vh; 
             display: flex; flex-direction: column; overflow: hidden; 
@@ -24,118 +20,164 @@
         header { 
             background: var(--melide-primary); color: white; padding: 0 15px; 
             display: none; align-items: center; justify-content: space-between;
-            height: 60px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            position: relative; z-index: 10;
+            height: 60px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); z-index: 100;
         }
 
-        .screen { display: none; flex: 1; padding: 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-        .screen.active { display: block; }
+        #scr-dash { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 40px 20px;
+            display: none; 
+        }
 
-        /* Estilos de tarjetas del menú */
-        .menu-card {
-            background: var(--card-bg);
-            color: var(--text-main);
-            padding: 20px;
-            border-radius: 18px;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            transition: transform 0.2s, box-shadow 0.2s;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+        .menu-grid {
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+            gap: 30px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .menu-item {
+            background: white; 
+            color: var(--melide-primary); 
+            padding: 60px 30px; 
+            border-radius: 30px; 
+            text-align: center; 
+            font-weight: bold; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
             justify-content: center;
-            aspect-ratio: 1 / 1;
+            gap: 25px; 
+            cursor: pointer; 
+            box-shadow: 0 12px 25px rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
         }
 
-        .menu-card:active { transform: scale(0.95); }
-
-        .btn {
-            background: var(--melide-primary);
-            color: white; border: none; padding: 12px 20px;
-            border-radius: 12px; font-weight: bold; width: 100%;
-            cursor: pointer; font-size: 1rem; margin-top: 10px;
+        .menu-item:active { 
+            transform: scale(0.96); 
+            box-shadow: 0 5px 10px rgba(0,0,0,0.2);
         }
 
-        input, select, textarea {
-            width: 100%; padding: 12px; margin: 10px 0;
-            border-radius: 10px; border: 1px solid #ccc;
-            font-size: 1rem; box-sizing: border-box;
+        .menu-item span { 
+            font-size: 5.5rem; 
+            display: block;
         }
 
-        /* Modales */
-        #modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); display: none; align-items: center;
-            justify-content: center; z-index: 100;
+        .menu-item label {
+            font-size: 1.5rem; 
+            letter-spacing: 1.5px;
+            cursor: pointer;
+            text-transform: uppercase;
         }
+
+        #scr-inicio { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .pin-container { display: flex; gap: 10px; justify-content: center; margin-bottom: 25px; }
+        .pin-input { width: 55px; height: 70px; text-align: center; font-size: 2rem; border-radius: 12px; border: none; background: white; color: #333; }
+        .btn-login { width: 100%; padding: 18px; border-radius: 12px; border: none; background: #2563eb; color: white; font-weight: bold; cursor: pointer; font-size: 1.1rem; }
+        
+        #scr-edit { flex: 1; overflow-y: auto; padding: 20px; display: none; }
+        #modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000; }
         #modal-overlay.active { display: flex; }
-        .modal-content {
-            background: white; color: #1e293b; padding: 25px;
-            border-radius: 20px; width: 90%; max-width: 400px;
-            max-height: 85vh; overflow-y: auto;
-        }
+        .modal-content { background: white; color: #333; padding: 30px; border-radius: 25px; width: 90%; max-width: 450px; position: relative; }
+        .header-btn { background:none; border:none; color:white; font-size: 1.8rem; cursor:pointer; padding: 5px 10px; }
     </style>
 </head>
 <body>
 
     <header id="main-header">
-        <button onclick="volverAtras()" style="background:none; border:none; color:white; font-size:1.5rem;">←</button>
-        <h1 id="header-title" style="font-size:1.1rem; margin:0; font-weight:800; letter-spacing:1px; text-transform: uppercase;">PANEL DE GESTIÓN</h1>
-        <button onclick="irInicio()" style="background:none; border:none; color:white; font-size:1.5rem;">🏠</button>
+        <button class="header-btn" id="btn-atras" onclick="atras()" style="display: none;">&#8592;</button>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <img src="Escudo Meldie.webp" alt="Logo" style="height: 45px; object-fit: contain;">
+            <span style="font-weight: bold; letter-spacing: 1.5px; font-size: 1.1rem;">MELIDE DEPORTES</span>
+        </div>
+        <button class="header-btn" onclick="location.reload()">&#127968;</button>
     </header>
 
-    <div id="scr-inicio" class="screen active" style="display:flex; align-items:center; justify-content:center;">
-        <div style="background:white; color:var(--text-main); padding:30px; border-radius:20px; width:85%; max-width:350px; text-align:center; box-shadow:0 10px 25px rgba(0,0,0,0.3);">
-            <img src="https://www.concellodemelide.org/images/logo.png" style="width:120px; margin-bottom:20px;">
-            <h2 style="margin:0 0 20px 0; color:var(--melide-primary); font-size:1.4rem;">ACCESO GESTIÓN</h2>
-            
-            <div style="text-align:left; margin-bottom:15px;">
-                <label style="font-size:0.75rem; font-weight:bold; color:#64748b;">PERFIL</label>
-                <select id="user-role" style="width:100%; margin-top:5px;">
-                    <option value="tecnico">TÉCNICO DEPORTES</option>
-                    <option value="monitor">MONITOR</option>
-                    <option value="politico">CONCELLEIRO/A</option>
-                </select>
+    <div id="scr-inicio">
+        <img src="Escudo Meldie.webp" alt="Logo" style="width: 140px; margin-bottom: 40px; object-fit: contain;">
+        <div style="background: rgba(255,255,255,0.15); backdrop-filter: blur(15px); padding: 40px; border-radius: 25px; width: 100%; max-width: 350px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
+            <select id="user-role" style="width: 100%; padding: 15px; margin-bottom: 25px; border-radius: 12px; border: none; font-weight: bold; font-size: 1rem;">
+                <option value="tecnico">TÉCNICO</option>
+                <option value="monitor">MONITOR</option>
+                <option value="politico">POLÍTICO</option>
+            </select>
+            <div class="pin-container">
+                <input type="password" class="pin-input" maxlength="1" inputmode="numeric">
+                <input type="password" class="pin-input" maxlength="1" inputmode="numeric">
+                <input type="password" class="pin-input" maxlength="1" inputmode="numeric">
+                <input type="password" class="pin-input" maxlength="1" inputmode="numeric">
             </div>
-
-            <div style="text-align:left; margin-bottom:20px;">
-                <label style="font-size:0.75rem; font-weight:bold; color:#64748b;">CONTRASEÑA</label>
-                <input type="password" id="user-pass" placeholder="••••" 
-                       onkeypress="if(event.key === 'Enter') login()"
-                       style="text-align:center; letter-spacing:5px; width:100%; padding:10px; box-sizing:border-box; color: black !important; background: white !important;">
-            </div>
-
-            <button class="btn" onclick="login()" style="margin-top:10px; height:50px; width:100%;">ENTRAR</button>
+            <button class="btn-login" onclick="login()">ENTRAR</button>
         </div>
     </div>
 
-    <div id="scr-dash" class="screen">
-        <div id="menu-container" style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:10px;">
-            </div>
+    <div id="scr-dash">
+        <div class="menu-grid" id="menu-container"></div>
     </div>
 
-    <div id="scr-edit" class="screen">
+    <div id="scr-edit">
         <div id="section-actions"></div>
         <div id="data-container"></div>
     </div>
 
-    <div id="modal-overlay">
-        <div class="modal-content">
-            <div id="modal-body"></div>
-            <button class="btn" onclick="closeModal()" style="background:#475569; margin-top:15px;">CERRAR</button>
-        </div>
+    <div id="modal-overlay" onclick="if(event.target === this) closeModal()">
+        <div class="modal-content" id="modal-body"></div>
     </div>
 
-    <script src="config.js"></script>
-    <script src="vistas.js"></script>
+    <script>
+        window.db = JSON.parse(localStorage.getItem('melide_db')) || { 
+            Monitores: [], Actividades: [], Aulas: [], Alumnos: [] 
+        };
+
+        function saveData() {
+            localStorage.setItem('melide_db', JSON.stringify(window.db));
+            if (typeof enviarDatosAWebApp === 'function') enviarDatosAWebApp();
+        }
+
+        function closeModal() {
+            document.getElementById('modal-overlay').classList.remove('active');
+        }
+
+        function atras() {
+            document.getElementById('scr-edit').style.display = 'none';
+            document.getElementById('btn-atras').style.display = 'none';
+            document.getElementById('scr-dash').style.display = 'block';
+            document.getElementById('main-header').style.display = 'flex';
+        }
+
+        (function repairDB() {
+            if (!window.db) window.db = {};
+            ['Monitores', 'Actividades', 'Aulas', 'Alumnos'].forEach(table => {
+                if (!window.db[table]) window.db[table] = [];
+            });
+            saveData();
+        })();
+    </script>
+
     <script src="seguridad.js"></script>
-    <script src="instalaciones.js"></script>
     <script src="monitores.js"></script>
     <script src="actividades.js"></script>
+    <script src="comunicacion.js"></script> 
+    <script src="instalaciones.js"></script>
     <script src="alumnos.js"></script>
     <script src="cuadrantes.js"></script>
-    <script src="sincronizacion.js"></script>
-    <script src="comunicacion.js"></script>
+    <script src="datos.js"></script>
 
+    <script>
+        const pinInputs = document.querySelectorAll('.pin-input');
+        pinInputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                if (e.target.value.length === 1 && index < pinInputs.length - 1) pinInputs[index + 1].focus();
+            });
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !e.target.value && index > 0) pinInputs[index - 1].focus();
+                if (e.key === 'Enter') login();
+            });
+        });
+        window.onload = () => { if(pinInputs[0]) pinInputs[0].focus(); };
+    </script>
 </body>
 </html>
