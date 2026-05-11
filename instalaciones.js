@@ -1,185 +1,172 @@
-// --- MÓDULO DE INSTALACIONES / AULAS ---
+// ==========================================
+// MÓDULO: INSTALACIONES (instalaciones.js)
+// ==========================================
 
 function mostrarAulas() {
     const actions = document.getElementById('section-actions');
     const container = document.getElementById('data-container');
-    
     if (!actions || !container) return;
 
     actions.innerHTML = `
-        <button class="btn" onclick="formAula()" style="background: var(--melide-accent); margin-bottom:20px;">
-            + NUEVA INSTALACIÓN / AULA
-        </button>
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:20px;">
+            <h2 style="margin:0; color:white; font-size:1.4rem;">INSTALACIÓNS</h2>
+            <button onclick="formAula()" style="background:#16a34a; color:white; padding:10px 20px; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">+ NOVA INSTALACIÓN</button>
+        </div>
     `;
-    container.innerHTML = "";
+    
+    // Aseguramos que exista el genérico de Parroquias y que todas tengan el array de lugares
+    verificarEstructuraAulas();
 
-    // Aseguramos que usamos la tabla Aulas de tu config.js
-    if (!window.db.Aulas) {
-        window.db.Aulas = [];
+    if (window.db.Aulas) {
+        window.db.Aulas.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+    }
+    
+    renderListaAulas(window.db.Aulas || []);
+}
+
+function verificarEstructuraAulas() {
+    if (!window.db.Aulas) window.db.Aulas = [];
+    
+    // 1. Crear el genérico de Parroquias si no existe
+    let tieneParroquias = window.db.Aulas.some(a => a.nome.toUpperCase() === "PARROQUIAS");
+    if (!tieneParroquias) {
+        window.db.Aulas.push({ nome: "PARROQUIAS", lugares: [] });
     }
 
-    // Orden alfabético por nombre
-    window.db.Aulas.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
-    
-    renderListaAulas(window.db.Aulas);
+    // 2. Asegurar que todas tengan array de lugares
+    window.db.Aulas.forEach(a => {
+        if (!a.lugares) a.lugares = [];
+    });
+    saveData();
 }
 
 function renderListaAulas(lista) {
     const container = document.getElementById('data-container');
-    
-    if (lista.length === 0) {
-        container.innerHTML = `<p style="text-align:center; opacity:0.6; padding:40px;">No hay aulas creadas.</p>`;
-        return;
-    }
+    container.style.display = "grid";
+    container.style.gridTemplateColumns = "repeat(auto-fill, minmax(280px, 1fr))"; 
+    container.style.gap = "20px";
+    container.innerHTML = "";
 
-    const grid = document.createElement('div');
-    grid.style.display = "grid";
-    grid.style.gridTemplateColumns = "1fr 1fr";
-    grid.style.gap = "15px";
-
-    lista.forEach((aula, idx) => {
+    lista.forEach((aula) => {
         const card = document.createElement('div');
-        card.className = "menu-card"; 
-        card.style.cursor = "pointer";
-        card.style.textAlign = "center";
-        card.style.margin = "0";
-        card.onclick = () => editarAula(idx);
+        card.style.cssText = "background:white; padding:25px; border-radius:20px; text-align:center; cursor:pointer; box-shadow:0 4px 15px rgba(0,0,0,0.1); border-top:8px solid #005696; color:#333;";
+        
+        const esParroquia = aula.nome.toUpperCase() === "PARROQUIAS";
         
         card.innerHTML = `
-            <strong style="font-size: 1.1rem; color: var(--melide-primary); display: block; text-transform: uppercase;">
-                ${aula.nome}
-            </strong>
-            <div style="font-size: 0.8rem; color: #64748b; margin-top: 5px;">
-                ${aula.direccion || 'Pulsar para añadir dirección'}
-            </div>
+            <span style="font-size:3rem; display:block; margin-bottom:10px;">${esParroquia ? '📍' : '🏢'}</span>
+            <h3 style="margin:0; font-size:1.2rem; color:#005696; text-transform:uppercase;">${aula.nome}</h3>
+            <p style="margin:10px 0 0; font-size:0.85rem; color:#64748b;">${aula.lugares.length} Localizacións</p>
         `;
-        grid.appendChild(card);
+
+        const realIdx = window.db.Aulas.findIndex(a => a.nome === aula.nome);
+        card.onclick = () => abrirGestionLugares(realIdx);
+        container.appendChild(card);
     });
-    
-    container.appendChild(grid);
 }
 
-function editarAula(idx) {
-    // IMPORTANTE: Conectamos con el objeto real de la base de datos
+function abrirGestionLugares(idx) {
     const aula = window.db.Aulas[idx];
-    const body = document.getElementById('modal-body');
+    const modalBody = document.getElementById('modal-body');
     
-    // Verificamos si es Parroquia por el nombre
-    const esParroquia = aula.nome && aula.nome.toUpperCase().includes("PARROQUIA");
-
-    let gestionLugaresHtml = "";
-    if (esParroquia) {
-        // CONEXIÓN DE DATOS: Si existen lugares ya guardados, los cargamos aquí
-        const lugaresActivos = aula.lugares || [];
-        
-        gestionLugaresHtml = `
-            <div style="margin-top:20px; padding:15px; background:#f1f5f9; border-radius:12px; border:1px solid #cbd5e1; color: #1e293b; text-align: left;">
-                <label style="font-weight:bold; color:var(--melide-primary); font-size:0.8rem; display:block; margin-bottom:10px;">LUGARES / PARROQUIAS ACTIVAS</label>
-                
-                <div style="display:flex; gap:10px; margin-bottom:15px;">
-                    <input type="text" id="nuevo-lugar" placeholder="Nuevo lugar..." style="margin:0; text-transform:uppercase;">
-                    <button class="btn" onclick="engadirLugar(${idx})" style="margin:0; width:auto; padding:0 15px; height:45px;">+</button>
-                </div>
-
-                <ul style="list-style:none; padding:0; margin:0;">
-                    ${lugaresActivos.length > 0 ? lugaresActivos.map((l, lIdx) => `
-                        <li style="display:flex; justify-content:space-between; align-items:center; background:white; padding:10px; border-radius:8px; margin-bottom:5px; border:1px solid #e2e8f0; font-size:0.9rem; font-weight:bold;">
-                            ${l} 
-                            <span onclick="borrarLugar(${idx}, ${lIdx})" style="color:#ef4444; cursor:pointer; font-weight:bold; padding:5px 10px;">✕</span>
-                        </li>
-                    `).join('') : '<li style="font-size:0.8rem; opacity:0.5;">No hay lugares registrados aún</li>'}
-                </ul>
+    modalBody.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#f1f5f9; padding:15px 20px; border-radius:25px 25px 0 0; border-bottom:1px solid #e2e8f0;">
+            <span style="font-weight:bold; color:#64748b; font-size:0.85rem; text-transform:uppercase;">XESTIÓN DE LOCALIZACIÓNS</span>
+            <button onclick="closeModal()" style="background:#cbd5e1; border:none; color:white; width:30px; height:30px; border-radius:50%; font-size:1.2rem; cursor:pointer; font-weight:bold;">&times;</button>
+        </div>
+        <div style="padding:20px; text-align:left;">
+            <h2 style="margin:0 0 15px; color:#005696; text-transform:uppercase; font-size:1.2rem;">${aula.nome}</h2>
+            
+            <div style="display:flex; gap:10px; margin-bottom:20px;">
+                <input type="text" id="nuevo-lugar-input" placeholder="Engadir nova localización..." style="flex:1; padding:12px; border-radius:10px; border:1px solid #ddd; text-transform:uppercase;">
+                <button onclick="engadirLugarALista(${idx})" style="background:#16a34a; color:white; border:none; border-radius:10px; padding:0 20px; font-weight:bold; cursor:pointer;">+</button>
             </div>
-        `;
-    }
 
-    body.innerHTML = `
-        <h3 style="color:var(--melide-primary); margin-bottom:15px;">Ficha Aula</h3>
-        
-        <label style="font-size:0.75rem; font-weight:bold; color:#64748b; display:block; text-align:left;">NOMBRE</label>
-        <input type="text" id="a-nome" value="${aula.nome || ''}" style="text-transform:uppercase;">
-        
-        <label style="font-size:0.75rem; font-weight:bold; color:#64748b; display:block; text-align:left;">DIRECCIÓN</label>
-        <input type="text" id="a-dir" value="${aula.direccion || ''}" placeholder="Escribe la dirección...">
+            <div id="lista-lugares-modal" style="max-height:250px; overflow-y:auto; border:1px solid #eee; border-radius:12px; padding:10px; background:#f8fafc;">
+                ${renderHtmlLugares(aula.lugares, idx)}
+            </div>
 
-        ${gestionLugaresHtml}
-
-        <div style="display:flex; gap:10px; margin-top:20px;">
-            <button class="btn" onclick="actualizarAula(${idx})" style="flex:2; height:50px;">GUARDAR</button>
-            <button class="btn" style="background:#ef4444; flex:1; height:50px;" onclick="borrarAula(${idx})">BORRAR</button>
+            <div style="margin-top:20px; padding-top:15px; border-top:1px solid #eee;">
+                <button onclick="borrarInstalacionCompleta(${idx})" style="width:100%; background:#fee2e2; color:#dc2626; padding:10px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:0.8rem;">ELIMINAR TODA A INSTALACIÓN</button>
+            </div>
         </div>
     `;
     document.getElementById('modal-overlay').classList.add('active');
 }
 
-function engadirLugar(idx) {
-    const input = document.getElementById('nuevo-lugar');
+function renderHtmlLugares(lugares, aulaIdx) {
+    if (lugares.length === 0) return `<p style="text-align:center; color:#94a3b8; font-size:0.9rem;">Non hai localizacións gardadas</p>`;
+    
+    return lugares.map((lugar, i) => `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:white; padding:10px 15px; border-radius:8px; margin-bottom:8px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <span style="font-weight:500; color:#334155;">${lugar}</span>
+            <button onclick="eliminarLugarDeLista(${aulaIdx}, ${i})" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:1rem;">🗑️</button>
+        </div>
+    `).join('');
+}
+
+function engadirLugarALista(idx) {
+    const input = document.getElementById('nuevo-lugar-input');
     const valor = input.value.trim().toUpperCase();
     if (!valor) return;
-    
-    // Aseguramos que la propiedad 'lugares' existe en el objeto actual
-    if (!window.db.Aulas[idx].lugares) {
-        window.db.Aulas[idx].lugares = [];
-    }
-    
-    window.db.Aulas[idx].lugares.push(valor);
-    saveData(); // Llama a la función de tu config.js para guardar en localStorage y nube
-    editarAula(idx); // Refresca el modal para mostrar el nuevo lugar
-}
 
-function borrarLugar(aIdx, lIdx) {
-    if(confirm("¿Eliminar este lugar de la lista?")) {
-        window.db.Aulas[aIdx].lugares.splice(lIdx, 1);
+    if (!window.db.Aulas[idx].lugares.includes(valor)) {
+        window.db.Aulas[idx].lugares.push(valor);
         saveData();
-        editarAula(aIdx);
+        // Refrescar el modal y la lista de fondo
+        document.getElementById('lista-lugares-modal').innerHTML = renderHtmlLugares(window.db.Aulas[idx].lugares, idx);
+        input.value = "";
+        mostrarAulas(); 
+    } else {
+        alert("Esta localización xa existe.");
     }
 }
 
-function actualizarAula(idx) {
-    const nome = document.getElementById('a-nome').value.trim().toUpperCase();
-    if (!nome) return alert("El nombre es necesario");
-    
-    window.db.Aulas[idx].nome = nome;
-    window.db.Aulas[idx].direccion = document.getElementById('a-dir').value.trim();
-    
-    saveData();
-    closeModal();
-    mostrarAulas();
+function eliminarLugarDeLista(aulaIdx, lugarIdx) {
+    if (confirm("¿Eliminar esta localización?")) {
+        window.db.Aulas[aulaIdx].lugares.splice(lugarIdx, 1);
+        saveData();
+        document.getElementById('lista-lugares-modal').innerHTML = renderHtmlLugares(window.db.Aulas[aulaIdx].lugares, aulaIdx);
+        mostrarAulas();
+    }
+}
+
+function borrarInstalacionCompleta(idx) {
+    if (confirm("¿ESTÁS SEGURO? Eliminarás toda a instalación e as súas localizacións.")) {
+        window.db.Aulas.splice(idx, 1);
+        saveData();
+        closeModal();
+        mostrarAulas();
+    }
 }
 
 function formAula() {
     const body = document.getElementById('modal-body');
     body.innerHTML = `
-        <h3 style="color:var(--melide-primary); margin-bottom:15px;">Nueva Aula</h3>
-        <label style="font-size:0.75rem; font-weight:bold; color:#64748b; display:block; text-align:left;">NOMBRE</label>
-        <input type="text" id="a-nome" style="text-transform:uppercase;" placeholder="Ej: PABELLÓN O PARROQUIAS">
-        <label style="font-size:0.75rem; font-weight:bold; color:#64748b; display:block; text-align:left;">DIRECCIÓN</label>
-        <input type="text" id="a-dir" placeholder="Dirección...">
-        <button class="btn" onclick="guardarAula()" style="margin-top:15px; height:50px;">CREAR</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#f1f5f9; padding:15px 20px; border-radius:25px 25px 0 0; border-bottom:1px solid #e2e8f0;">
+            <span style="font-weight:bold; color:#64748b; font-size:0.85rem; text-transform:uppercase;">NOVA INSTALACIÓN</span>
+            <button onclick="closeModal()" style="background:#cbd5e1; border:none; color:white; width:30px; height:30px; border-radius:50%; font-size:1.2rem; cursor:pointer; font-weight:bold;">&times;</button>
+        </div>
+        <div style="padding:20px; text-align:left;">
+            <label style="font-weight:bold; font-size:0.8rem; color:#64748b; display:block; margin-bottom:8px;">NOME DO EDIFICIO / GRUPO</label>
+            <input type="text" id="a-nome" placeholder="EX: PABELLÓN, PISCINA, PARROQUIAS..." style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd; text-transform:uppercase; box-sizing:border-box; margin-bottom:15px;">
+            <button onclick="guardarAula()" style="width:100%; background:#16a34a; color:white; padding:15px; border:none; border-radius:12px; font-weight:bold; cursor:pointer;">CREAR INSTALACIÓN</button>
+        </div>
     `;
     document.getElementById('modal-overlay').classList.add('active');
 }
 
 function guardarAula() {
     const nome = document.getElementById('a-nome').value.trim().toUpperCase();
-    if (!nome) return alert("El nombre es necesario");
-    
-    window.db.Aulas.push({
-        nome: nome,
-        direccion: document.getElementById('a-dir').value.trim(),
-        lugares: []
-    });
-    
-    saveData();
-    closeModal();
-    mostrarAulas();
+    if (nome) { 
+        if (!window.db.Aulas) window.db.Aulas = [];
+        window.db.Aulas.push({ nome: nome, lugares: [] }); 
+        saveData(); 
+        closeModal(); 
+        mostrarAulas(); 
+    }
 }
 
-function borrarAula(idx) {
-    if (confirm("¿Borrar esta aula completamente?")) {
-        window.db.Aulas.splice(idx, 1);
-        saveData();
-        closeModal();
-        mostrarAulas();
-    }
+function closeModal() { 
+    document.getElementById('modal-overlay').classList.remove('active'); 
 }
