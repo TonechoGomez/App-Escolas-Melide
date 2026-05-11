@@ -1,6 +1,29 @@
 // --- MÓDULO DE SINCRONIZACIÓN CON LA NUBE (GOOGLE SHEETS) ---
 
 /**
+ * 1. DESCARGA AUTOMÁTICA AL INICIO
+ * Este bloque hace que la App busque los datos en la nube nada más abrirse.
+ */
+(function cargarDatosAlInicio() {
+    // Si no hay URL configurada, no hacemos nada
+    if (!window.SCRIPT_URL || window.SCRIPT_URL.includes("TU_URL_AQUI")) return;
+
+    console.log("Sincronizando con la nube...");
+    
+    fetch(window.SCRIPT_URL)
+        .then(response => response.json())
+        .then(datosNube => {
+            if (datosNube && typeof datosNube === 'object') {
+                // Guardamos lo que viene de la nube en el dispositivo
+                window.db = datosNube;
+                localStorage.setItem('melide_db', JSON.stringify(window.db));
+                console.log("Base de datos actualizada desde la nube con éxito.");
+            }
+        })
+        .catch(err => console.warn("Modo offline: No se pudo conectar con la nube.", err));
+})();
+
+/**
  * Envía la base de datos completa a la Web App de Google
  */
 function enviarDatosAWebApp() {
