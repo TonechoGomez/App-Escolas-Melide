@@ -1,7 +1,6 @@
 // ==========================================
-// MÓDULO: CONFIGURACIÓN E ESTADÍSTICAS (datos.js)
+// MÓDULO: CONFIGURACIÓN E ESTADÍSTICAS (vistas.js)
 // ==========================================
-
 
 // --- PANEL DE ESTADÍSTICAS ---
 function verPanelEstadisticas() {
@@ -9,7 +8,6 @@ function verPanelEstadisticas() {
     const actividades = window.db.Actividades || [];
     const alumnos = window.db.Alumnos || [];
 
-    // Cálculo de porcentaje general (Inscritos vs Plazas totales)
     let totalPlazas = 0;
     let totalInscritos = alumnos.length;
     actividades.forEach(a => totalPlazas += (parseInt(a.plazas) || 0));
@@ -28,7 +26,7 @@ function verPanelEstadisticas() {
                 <h3 style="margin:0 0 15px 0; color:#64748b; font-size:0.9rem; text-transform:uppercase; text-align:center;">Por Actividade</h3>
                 <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
                     ${actividades.map(act => {
-                        const inscritosAct = alumnos.filter(al => al.actividad === act.nome).length;
+                        const inscritosAct = alumnos.filter(al => al.act === act.nome).length;
                         const plazasAct = parseInt(act.plazas) || 0;
                         const pAct = plazasAct > 0 ? Math.round((inscritosAct / plazasAct) * 100) : 0;
                         return `
@@ -41,7 +39,7 @@ function verPanelEstadisticas() {
                 </table>
             </div>
         </div>
-        <button onclick="mostrarConfiguracion()" style="margin-top:20px; width:100%; padding:12px; background:#475569; color:white; border:none; border-radius:10px; cursor:pointer; font-weight:bold;">VOLVER</button>
+        <button onclick="mostrarPanelNube()" style="margin-top:20px; width:100%; padding:12px; background:#475569; color:white; border:none; border-radius:10px; cursor:pointer; font-weight:bold;">VOLVER</button>
     `;
 }
 
@@ -64,19 +62,17 @@ function verPanelDatos() {
                 <button onclick="borrarTodaLaBD()" style="padding:15px; background:#ef4444; color:white; border:none; border-radius:12px; font-weight:bold; cursor:pointer; margin-top:10px;">⚠️ BORRAR TODA A BASE DE DATOS</button>
             </div>
 
-            <button onclick="mostrarConfiguracion()" style="margin-top:30px; width:100%; padding:12px; background:#475569; color:white; border:none; border-radius:10px; cursor:pointer; font-weight:bold;">VOLVER</button>
+            <button onclick="mostrarPanelNube()" style="margin-top:30px; width:100%; padding:12px; background:#475569; color:white; border:none; border-radius:10px; cursor:pointer; font-weight:bold;">VOLVER</button>
         </div>
     `;
 }
 
 function exportarDatosJSON() {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(window.db));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "licitacion_backup.json");
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
+    const link = document.createElement('a');
+    link.setAttribute("href", dataStr);
+    link.setAttribute("download", "licitacion_backup.json");
+    link.click();
 }
 
 function importarDatosJSON(event) {
@@ -86,7 +82,7 @@ function importarDatosJSON(event) {
             const importado = JSON.parse(e.target.result);
             if (confirm("Isto sobrescribirá todos os datos actuais. Continuar?")) {
                 window.db = importado;
-                guardarDB();
+                if(typeof saveData === 'function') saveData();
                 alert("Datos restaurados correctamente.");
                 location.reload();
             }
@@ -97,8 +93,8 @@ function importarDatosJSON(event) {
 
 function borrarTodaLaBD() {
     if (confirm("¿ESTÁS SEGURO? Perderás todos os monitores, actividades e alumnos.")) {
-        window.db = { Centros: [], Aulas: [], Monitores: [], Actividades: [], Alumnos: [], Material: [] };
-        guardarDB();
+        window.db = { Monitores: [], Actividades: [], Aulas: [], Alumnos: [] };
+        if(typeof saveData === 'function') saveData();
         location.reload();
     }
 }
