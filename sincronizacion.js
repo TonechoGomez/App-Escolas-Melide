@@ -3,12 +3,12 @@
 (function cargarDatosAlInicio() {
     if (!window.SCRIPT_URL || window.SCRIPT_URL.includes("TU_URL_AQUI")) return;
     fetch(window.SCRIPT_URL).then(r => r.json()).then(datos => {
-        if (datos) {
+        if (datos && typeof datos === 'object') {
             window.db = datos;
             localStorage.setItem('melide_db', JSON.stringify(window.db));
-            console.log("Nube cargada.");
+            console.log("Datos da nube cargados.");
         }
-    }).catch(e => console.warn("Modo offline."));
+    }).catch(e => console.warn("Modo offline activo."));
 })();
 
 function enviarDatosAWebApp() {
@@ -17,14 +17,14 @@ function enviarDatosAWebApp() {
         method: 'POST',
         mode: 'no-cors',
         body: JSON.stringify({ action: "updateDB", db: window.db, user: window.userRole, fecha: new Date().toLocaleString() })
-    });
+    }).then(() => console.log("Sincronizado."));
 }
 
 function mostrarPanelNube() {
     const container = document.getElementById('data-container');
     const actions = document.getElementById('section-actions');
     
-    actions.innerHTML = `<h2 style="color:white; margin:0;">⚙️ CONFIGURACIÓN DO SISTEMA</h2>`;
+    actions.innerHTML = `<h2 style="color:white; margin:0;">⚙️ CONFIGURACIÓN</h2>`;
     container.style.display = "grid";
     container.style.gridTemplateColumns = "repeat(auto-fit, minmax(300px, 1fr))";
     container.style.gap = "20px";
@@ -39,9 +39,9 @@ function mostrarPanelNube() {
 
         <div style="background:white; color:#1e293b; padding:30px; border-radius:20px; box-shadow:0 10px 25px rgba(0,0,0,0.2); text-align:center;">
             <span style="font-size: 3rem;">☁️</span>
-            <h3 style="color:#005696; margin:10px 0;">Sincronización Nube</h3>
+            <h3 style="color:#005696; margin:10px 0;">Nube Google</h3>
             <button onclick="forzarSincro()" style="width:100%; background:#0284c7; color:white; padding:15px; border:none; border-radius:12px; font-weight:bold; cursor:pointer; margin-bottom:10px;">SUBIR Á NUBE AGORA</button>
-            <button onclick="verPanelDatos()" style="width:100%; background:#64748b; color:white; padding:10px; border:none; border-radius:12px; cursor:pointer;">Xestión de Copias JSON</button>
+            <button onclick="verPanelDatos()" style="width:100%; background:#64748b; color:white; padding:10px; border:none; border-radius:12px; cursor:pointer;">Copias de Seguridade JSON</button>
         </div>
     `;
 }
@@ -50,3 +50,4 @@ function forzarSincro() {
     alert("Subindo datos a Google Sheets...");
     enviarDatosAWebApp();
 }
+
