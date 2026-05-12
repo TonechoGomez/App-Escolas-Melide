@@ -86,7 +86,6 @@ function verSeccion(seccion) {
         case 'instalaciones': mostrarAulas(); break;
         case 'alumnos': mostrarAlumnos(); break;
         case 'cuadrantes': mostrarCuadrantes(); break;
-      case 'configuracion': mostrarPanelNube(); break;
-            
+        case 'configuracion': mostrarPanelNube(); break; // <-- ESTA LÍNEA ES LA CLAVE
     }
-}
+    
