@@ -80,12 +80,13 @@ function verSeccion(seccion) {
     document.getElementById('data-container').innerHTML = "";
     document.getElementById('section-actions').innerHTML = "";
 
-   switch(seccion) {
+    switch(seccion) {
         case 'monitores': mostrarMonitores(); break;
         case 'actividades': mostrarActividades(); break;
         case 'instalaciones': mostrarAulas(); break;
         case 'alumnos': mostrarAlumnos(); break;
         case 'cuadrantes': mostrarCuadrantes(); break;
-        case 'configuracion': mostrarPanelNube(); break; // <-- ESTA LÍNEA ES LA CLAVE
+        // CAMBIO QUIRÚRGICO: Llamamos a mostrarDatos() para ver los cajones naranjas de backup
+        case 'configuracion': if(typeof mostrarDatos === 'function') mostrarDatos(); break;
     }
-    
+}

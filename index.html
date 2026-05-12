@@ -26,19 +26,19 @@
         #scr-dash { 
             flex: 1; 
             overflow-y: auto; 
-            padding: 40px 20px;
+            padding: 40px 20px; 
             display: none; 
         }
 
-        .menu-grid {
+        .menu-grid { 
             display: grid; 
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
-            gap: 30px;
-            max-width: 1000px;
-            margin: 0 auto;
+            gap: 30px; 
+            max-width: 1000px; 
+            margin: 0 auto; 
         }
 
-        .menu-item {
+        .menu-item { 
             background: white; 
             color: var(--melide-primary); 
             padding: 60px 30px; 
@@ -56,37 +56,61 @@
             transition: transform 0.2s, box-shadow 0.2s;
         }
 
-        .menu-item:active { 
-            transform: scale(0.96); 
-            box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+        .menu-item:active { transform: scale(0.96); box-shadow: 0 5px 10px rgba(0,0,0,0.2); }
+        .menu-item span { font-size: 5.5rem; display: block; }
+        .menu-item label { font-size: 1.5rem; letter-spacing: 1.5px; cursor: pointer; text-transform: uppercase; }
+
+        #scr-inicio { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 20px; 
         }
 
-        .menu-item span { 
-            font-size: 5.5rem; 
-            display: block;
-        }
-
-        .menu-item label {
-            font-size: 1.5rem; 
-            letter-spacing: 1.5px;
-            cursor: pointer;
-            text-transform: uppercase;
-        }
-
-        #scr-inicio { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         .pin-container { display: flex; gap: 10px; justify-content: center; margin-bottom: 25px; }
-        .pin-input { width: 55px; height: 70px; text-align: center; font-size: 2rem; border-radius: 12px; border: none; background: white; color: #333; }
-        .btn-login { width: 100%; padding: 18px; border-radius: 12px; border: none; background: #2563eb; color: white; font-weight: bold; cursor: pointer; font-size: 1.1rem; }
-        
+        .pin-input { 
+            width: 55px; 
+            height: 70px; 
+            text-align: center; 
+            font-size: 2rem; 
+            border-radius: 12px; 
+            border: none; 
+            background: white; 
+            color: #333; 
+        }
+
+        .btn-login { 
+            width: 100%; 
+            padding: 18px; 
+            border-radius: 12px; 
+            border: none; 
+            background: #2563eb; 
+            color: white; 
+            font-weight: bold; 
+            cursor: pointer; 
+            font-size: 1.1rem; 
+        }
+
         #scr-edit { flex: 1; overflow-y: auto; padding: 20px; display: none; }
-        #modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        
+        #modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none; justify-content: center; align-items: center;
+            z-index: 1000;
+        }
         #modal-overlay.active { display: flex; }
-        .modal-content { background: white; color: #333; padding: 30px; border-radius: 25px; width: 90%; max-width: 450px; position: relative; }
+        .modal-content {
+            background: white; color: #333; padding: 30px; border-radius: 25px;
+            width: 90%; max-width: 450px; position: relative;
+        }
+
         .header-btn { background:none; border:none; color:white; font-size: 1.8rem; cursor:pointer; padding: 5px 10px; }
     </style>
 </head>
 <body>
-
     <header id="main-header">
         <button class="header-btn" id="btn-atras" onclick="atras()" style="display: none;">&#8592;</button>
         <div style="display: flex; align-items: center; gap: 12px;">
@@ -128,45 +152,28 @@
     </div>
 
     <script>
-        window.db = JSON.parse(localStorage.getItem('melide_db')) || { 
-            Monitores: [], Actividades: [], Aulas: [], Alumnos: [] 
-        };
-
-        function saveData() {
-            localStorage.setItem('melide_db', JSON.stringify(window.db));
-            if (typeof enviarDatosAWebApp === 'function') enviarDatosAWebApp();
-        }
-
-        function closeModal() {
-            document.getElementById('modal-overlay').classList.remove('active');
-        }
-
         function atras() {
             document.getElementById('scr-edit').style.display = 'none';
             document.getElementById('btn-atras').style.display = 'none';
             document.getElementById('scr-dash').style.display = 'block';
             document.getElementById('main-header').style.display = 'flex';
         }
-
-        (function repairDB() {
-            if (!window.db) window.db = {};
-            ['Monitores', 'Actividades', 'Aulas', 'Alumnos'].forEach(table => {
-                if (!window.db[table]) window.db[table] = [];
-            });
-            saveData();
-        })();
+        function closeModal() { document.getElementById('modal-overlay').classList.remove('active'); }
     </script>
 
     <script src="config.js"></script>
-<script src="sincronizacion.js"></script>
-<script src="vistas.js"></script>
-<script src="monitores.js"></script>
-<script src="actividades.js"></script>
-<script src="comunicacion.js"></script> 
-<script src="instalaciones.js"></script>
-<script src="alumnos.js"></script>
-<script src="cuadrantes.js"></script>
-<script src="seguridad.js"></script>
+    <script src="datos.js"></script>
+    <script src="sincronizacion.js"></script>
+    
+    <script src="monitores.js"></script>
+    <script src="actividades.js"></script>
+    <script src="comunicacion.js"></script> 
+    <script src="instalaciones.js"></script>
+    <script src="alumnos.js"></script>
+    <script src="cuadrantes.js"></script>
+    <script src="vistas.js"></script>
+    
+    <script src="seguridad.js"></script>
 
     <script>
         const pinInputs = document.querySelectorAll('.pin-input');

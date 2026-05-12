@@ -9,7 +9,7 @@ window.db = JSON.parse(localStorage.getItem('melide_db')) || {
 };
 
 // 2. URL de sincronización (Google Script)
-window.SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyrKFxBcP1eRh08HiUtvFS6Qas8BPuSe8UXdlH6nr3erg4KYippGK2pTnObgsNnwSZHpA/exec";
+window.SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyR675_Y42K8pB8GzB9I_vI_RkZ_N4Fh9D0kR/exec";
 
 /**
  * Guarda los datos en el navegador y activa la sincronización
