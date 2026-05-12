@@ -80,7 +80,7 @@ function verSeccion(seccion) {
     document.getElementById('data-container').innerHTML = "";
     document.getElementById('section-actions').innerHTML = "";
 
-    switch(seccion) {
+   switch(seccion) {
         case 'monitores': mostrarMonitores(); break;
         case 'actividades': mostrarActividades(); break;
         case 'instalaciones': mostrarAulas(); break;
