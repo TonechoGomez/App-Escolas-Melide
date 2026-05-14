@@ -7,16 +7,15 @@ function mostrarAulas() {
     const container = document.getElementById('data-container');
     if (!actions || !container) return;
 
-    // --- SISTEMA DE ESPERA ACTIVA (Solución para la Web) ---
-    // Si window.db no existe o Aulas está vacío, esperamos a la nube
+    // --- PROTECCIÓN DE DATOS (Solución al vacío en web) ---
+    // Si la base de datos aún no tiene las 10 aulas que vimos en consola, 
+    // mostramos un aviso y reintentamos en medio segundo.
     if (!window.db || !window.db.Aulas || window.db.Aulas.length === 0) {
-        container.innerHTML = `<div style="text-align:center; color:white; padding:40px; font-weight:bold;">CARGANDO DATOS DA NUBE...</div>`;
-        
-        // Reintentamos cada 500ms hasta que los datos confirmados en consola se carguen
+        container.innerHTML = `<div style="text-align:center; color:white; padding:40px; font-weight:bold;">CARGANDO INSTALACIÓNS...</div>`;
         setTimeout(mostrarAulas, 500); 
         return;
     }
-    // -------------------------------------------------------
+    // ------------------------------------------------------
 
     actions.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:20px;">
@@ -25,10 +24,9 @@ function mostrarAulas() {
         </div>
     `;
     
-    // Ejecutamos tu lógica original de verificación
     verificarEstructuraAulas();
 
-    // Ordenamos la lista que ya sabemos que tiene datos
+    // Usamos una copia para no alterar la DB original al ordenar
     const listaAulas = [...window.db.Aulas];
     listaAulas.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
     
@@ -38,13 +36,11 @@ function mostrarAulas() {
 function verificarEstructuraAulas() {
     if (!window.db.Aulas) window.db.Aulas = [];
     
-    // 1. Crear el genérico de Parroquias si no existe
     let tieneParroquias = window.db.Aulas.some(a => a.nome && a.nome.toUpperCase() === "PARROQUIAS");
     if (!tieneParroquias) {
         window.db.Aulas.push({ nome: "PARROQUIAS", lugares: [] });
     }
 
-    // 2. Asegurar que todas tengan array de lugares para evitar errores de lectura
     window.db.Aulas.forEach(a => {
         if (!a.lugares) a.lugares = [];
     });
