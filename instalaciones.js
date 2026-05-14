@@ -14,30 +14,31 @@ function mostrarAulas() {
         </div>
     `;
     
-    // Aseguramos que exista el genérico de Parroquias y que todas tengan el array de lugares
+    // VALIDACIÓN DE DATOS (Solución al error de lectura en web)
+    if (!window.db || !window.db.Aulas) {
+        container.innerHTML = `<div style="text-align:center; color:white; padding:40px;">Cargando datos da nube...</div>`;
+        return; 
+    }
+
     verificarEstructuraAulas();
 
-    if (window.db.Aulas) {
-        window.db.Aulas.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
-    }
+    // Ordenar para la vista
+    const listaOrdenada = [...window.db.Aulas].sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
     
-    renderListaAulas(window.db.Aulas || []);
+    renderListaAulas(listaOrdenada);
 }
 
 function verificarEstructuraAulas() {
     if (!window.db.Aulas) window.db.Aulas = [];
     
-    // 1. Crear el genérico de Parroquias si no existe
     let tieneParroquias = window.db.Aulas.some(a => a.nome.toUpperCase() === "PARROQUIAS");
     if (!tieneParroquias) {
         window.db.Aulas.push({ nome: "PARROQUIAS", lugares: [] });
     }
 
-    // 2. Asegurar que todas tengan array de lugares
     window.db.Aulas.forEach(a => {
         if (!a.lugares) a.lugares = [];
     });
-    saveData();
 }
 
 function renderListaAulas(lista) {
@@ -52,13 +53,15 @@ function renderListaAulas(lista) {
         card.style.cssText = "background:white; padding:25px; border-radius:20px; text-align:center; cursor:pointer; box-shadow:0 4px 15px rgba(0,0,0,0.1); border-top:8px solid #005696; color:#333;";
         
         const esParroquia = aula.nome.toUpperCase() === "PARROQUIAS";
+        const totalLugares = (aula.lugares || []).length;
         
         card.innerHTML = `
             <span style="font-size:3rem; display:block; margin-bottom:10px;">${esParroquia ? '📍' : '🏢'}</span>
             <h3 style="margin:0; font-size:1.2rem; color:#005696; text-transform:uppercase;">${aula.nome}</h3>
-            <p style="margin:10px 0 0; font-size:0.85rem; color:#64748b;">${aula.lugares.length} Localizacións</p>
+            <p style="margin:10px 0 0; font-size:0.85rem; color:#64748b;">${totalLugares} Localizacións</p>
         `;
 
+        // Buscamos el índice real en la base de datos original para que la edición funcione
         const realIdx = window.db.Aulas.findIndex(a => a.nome === aula.nome);
         card.onclick = () => abrirGestionLugares(realIdx);
         container.appendChild(card);
@@ -83,7 +86,7 @@ function abrirGestionLugares(idx) {
             </div>
 
             <div id="lista-lugares-modal" style="max-height:250px; overflow-y:auto; border:1px solid #eee; border-radius:12px; padding:10px; background:#f8fafc;">
-                ${renderHtmlLugares(aula.lugares, idx)}
+                ${renderHtmlLugares(aula.lugares || [], idx)}
             </div>
 
             <div style="margin-top:20px; padding-top:15px; border-top:1px solid #eee;">
@@ -95,7 +98,7 @@ function abrirGestionLugares(idx) {
 }
 
 function renderHtmlLugares(lugares, aulaIdx) {
-    if (lugares.length === 0) return `<p style="text-align:center; color:#94a3b8; font-size:0.9rem;">Non hai localizacións gardadas</p>`;
+    if (!lugares || lugares.length === 0) return `<p style="text-align:center; color:#94a3b8; font-size:0.9rem;">Non hai localizacións gardadas</p>`;
     
     return lugares.map((lugar, i) => `
         <div style="display:flex; justify-content:space-between; align-items:center; background:white; padding:10px 15px; border-radius:8px; margin-bottom:8px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
@@ -112,8 +115,7 @@ function engadirLugarALista(idx) {
 
     if (!window.db.Aulas[idx].lugares.includes(valor)) {
         window.db.Aulas[idx].lugares.push(valor);
-        saveData();
-        // Refrescar el modal y la lista de fondo
+        if (typeof saveData === 'function') saveData();
         document.getElementById('lista-lugares-modal').innerHTML = renderHtmlLugares(window.db.Aulas[idx].lugares, idx);
         input.value = "";
         mostrarAulas(); 
@@ -125,7 +127,7 @@ function engadirLugarALista(idx) {
 function eliminarLugarDeLista(aulaIdx, lugarIdx) {
     if (confirm("¿Eliminar esta localización?")) {
         window.db.Aulas[aulaIdx].lugares.splice(lugarIdx, 1);
-        saveData();
+        if (typeof saveData === 'function') saveData();
         document.getElementById('lista-lugares-modal').innerHTML = renderHtmlLugares(window.db.Aulas[aulaIdx].lugares, aulaIdx);
         mostrarAulas();
     }
@@ -134,7 +136,7 @@ function eliminarLugarDeLista(aulaIdx, lugarIdx) {
 function borrarInstalacionCompleta(idx) {
     if (confirm("¿ESTÁS SEGURO? Eliminarás toda a instalación e as súas localizacións.")) {
         window.db.Aulas.splice(idx, 1);
-        saveData();
+        if (typeof saveData === 'function') saveData();
         closeModal();
         mostrarAulas();
     }
@@ -161,7 +163,7 @@ function guardarAula() {
     if (nome) { 
         if (!window.db.Aulas) window.db.Aulas = [];
         window.db.Aulas.push({ nome: nome, lugares: [] }); 
-        saveData(); 
+        if (typeof saveData === 'function') saveData(); 
         closeModal(); 
         mostrarAulas(); 
     }
