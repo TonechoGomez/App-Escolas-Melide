@@ -42,9 +42,8 @@ function renderListaAulas(lista) {
         const card = document.createElement('div');
         card.style.cssText = "background:white; color:#1e293b; padding:25px; border-radius:20px; text-align:center; cursor:pointer; box-shadow:0 10px 20px rgba(0,0,0,0.2); position:relative;";
         
-        const numLugares = (aula.lugares || []).length;
         const subInfo = aula.nome.toUpperCase() === "PARROQUIAS" 
-            ? `<div style="font-size:0.8rem; color:#64748b; margin-top:5px;">${numLugares} LOCALIZACIÓNS</div>`
+            ? `<div style="font-size:0.8rem; color:#64748b; margin-top:5px;">${(aula.lugares || []).length} LOCALIZACIÓNS</div>`
             : "";
 
         card.innerHTML = `
@@ -54,13 +53,9 @@ function renderListaAulas(lista) {
             <button onclick="event.stopPropagation(); borrarAula(${idx})" style="position:absolute; top:10px; right:10px; background:none; border:none; color:#ef4444; font-size:1.2rem; cursor:pointer;">&times;</button>
         `;
         
-        // CORRECCIÓN: Ahora al pulsar en cualquier tarjeta, se ejecuta la acción correcta
         card.onclick = () => {
             if (aula.nome.toUpperCase() === "PARROQUIAS") {
                 verDetalleParroquias(idx);
-            } else {
-                // Aquí podrías añadir lógica para ver actividades de esa instalación si lo necesitas
-                console.log("Seleccionada instalación: " + aula.nome);
             }
         };
         container.appendChild(card);
@@ -69,6 +64,8 @@ function renderListaAulas(lista) {
 
 function verDetalleParroquias(idxAula) {
     const aula = window.db.Aulas[idxAula];
+    if (!aula.lugares) aula.lugares = [];
+
     const container = document.getElementById('data-container');
     const actions = document.getElementById('section-actions');
 
@@ -80,7 +77,7 @@ function verDetalleParroquias(idxAula) {
     `;
 
     container.innerHTML = "";
-    if (!aula.lugares || aula.lugares.length === 0) {
+    if (aula.lugares.length === 0) {
         container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:white; padding:40px;">Non hai lugares rexistrados.</div>`;
     } else {
         aula.lugares.forEach((lugar, idxLugar) => {
@@ -125,6 +122,14 @@ function borrarLugar(idxAula, idxLugar) {
     }
 }
 
+function borrarAula(idx) {
+    if (confirm("¿Borrar esta instalación?")) {
+        window.db.Aulas.splice(idx, 1);
+        saveData();
+        mostrarAulas();
+    }
+}
+
 function formAula() {
     const body = document.getElementById('modal-body');
     body.innerHTML = `
@@ -144,14 +149,6 @@ function guardarAula() {
     saveData();
     closeModal();
     mostrarAulas();
-}
-
-function borrarAula(idx) {
-    if (confirm("¿Borrar esta instalación?")) {
-        window.db.Aulas.splice(idx, 1);
-        saveData();
-        mostrarAulas();
-    }
 }
 
 function closeModal() {

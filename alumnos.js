@@ -93,7 +93,7 @@ function renderizarListaAlumnos(query = "") {
                 <input type="checkbox" ${alumnoItem.asistencias && alumnoItem.asistencias[hoyISO] ? 'checked' : ''} onchange="marcarAsistenciaRapida(${realIdx}, '${hoyISO}', this.checked)" style="width:22px; height:22px; cursor:pointer;">
             </div>
 
-            <div style="flex:2;">
+            <div style="flex:2;" onclick="editarAlumno(${realIdx})">
                 <h3 style="margin:0; font-size:1rem; text-transform:uppercase;">${alumnoItem.nome} ${alumnoItem.apelidos || ''}</h3>
                 <p style="margin:0; font-size:0.8rem; color:#666; font-weight:bold;">${alumnoItem.act || 'SEN ACTIVIDADE'}</p>
             </div>
@@ -106,16 +106,69 @@ function renderizarListaAlumnos(query = "") {
                 <option value="Baja" ${estadoFinal === 'BAIXA' ? 'selected' : ''}>BAIXA</option>
             </select>
 
-            <div style="display:flex; gap:10px;">
-                <button onclick="editarAlumno(${realIdx})" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:1.1rem;">✏️</button>
-                <button onclick="borrarAlumno(${realIdx})" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:1.1rem;">🗑️</button>
-            </div>
+            <button onclick="borrarAlumno(${realIdx})" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:1.1rem;">🗑️</button>
         `;
         container.appendChild(card);
     });
 }
 
-// FUNCIONES DE APOYO (Literalmente tus originales)
+function editarAlumno(index) {
+    const al = window.db.Alumnos[index];
+    const modalBody = document.getElementById('modal-body');
+    
+    // Restauramos todos los campos y cajones de datos originales
+    modalBody.innerHTML = `
+        <div style="padding:15px; text-align:left; background:#f8fafc; border-radius:20px;">
+            <h2 style="color:#005696; margin-bottom:20px; font-size:1.5rem; text-align:center;">DATOS DO ALUMNO</h2>
+            
+            <div style="background:white; padding:15px; border-radius:15px; box-shadow:0 2px 5px rgba(0,0,0,0.05); margin-bottom:15px;">
+                <label style="font-weight:bold; color:#64748b; font-size:0.8rem;">NOME E APELIDOS</label>
+                <input type="text" id="edit-nome" value="${al.nome || ''}" placeholder="Nome" style="width:100%; padding:10px; margin:5px 0; border:1px solid #e2e8f0; border-radius:8px;">
+                <input type="text" id="edit-apelidos" value="${al.apelidos || ''}" placeholder="Apelidos" style="width:100%; padding:10px; margin:5px 0; border:1px solid #e2e8f0; border-radius:8px;">
+            </div>
+
+            <div style="background:white; padding:15px; border-radius:15px; box-shadow:0 2px 5px rgba(0,0,0,0.05); margin-bottom:15px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div>
+                    <label style="font-weight:bold; color:#64748b; font-size:0.8rem;">DNI</label>
+                    <input type="text" id="edit-dni" value="${al.dni || ''}" style="width:100%; padding:10px; border:1px solid #e2e8f0; border-radius:8px;">
+                </div>
+                <div>
+                    <label style="font-weight:bold; color:#64748b; font-size:0.8rem;">F. NACEMENTO</label>
+                    <input type="date" id="edit-nace" value="${al.nacemento || ''}" style="width:100%; padding:10px; border:1px solid #e2e8f0; border-radius:8px;">
+                </div>
+            </div>
+
+            <div style="background:white; padding:15px; border-radius:15px; box-shadow:0 2px 5px rgba(0,0,0,0.05); margin-bottom:15px;">
+                <label style="font-weight:bold; color:#64748b; font-size:0.8rem;">CONTACTO</label>
+                <input type="text" id="edit-tel" value="${al.tlf || ''}" placeholder="Teléfono principal" style="width:100%; padding:10px; margin:5px 0; border:1px solid #e2e8f0; border-radius:8px;">
+                <input type="email" id="edit-email" value="${al.email || ''}" placeholder="Email" style="width:100%; padding:10px; margin:5px 0; border:1px solid #e2e8f0; border-radius:8px;">
+            </div>
+
+            <div style="background:white; padding:15px; border-radius:15px; box-shadow:0 2px 5px rgba(0,0,0,0.05); margin-bottom:20px;">
+                <label style="font-weight:bold; color:#64748b; font-size:0.8rem;">DIRECCIÓN</label>
+                <input type="text" id="edit-dir" value="${al.direccion || ''}" placeholder="Rúa, número..." style="width:100%; padding:10px; border:1px solid #e2e8f0; border-radius:8px;">
+            </div>
+
+            <button onclick="actualizarAlumno(${index})" style="width:100%; background:#005696; color:white; padding:15px; border:none; border-radius:12px; font-weight:bold; cursor:pointer; font-size:1rem;">GARDAR CAMBIOS</button>
+        </div>
+    `;
+    document.getElementById('modal-overlay').classList.add('active');
+}
+
+function actualizarAlumno(index) {
+    window.db.Alumnos[index].nome = document.getElementById('edit-nome').value.trim();
+    window.db.Alumnos[index].apelidos = document.getElementById('edit-apelidos').value.trim();
+    window.db.Alumnos[index].dni = document.getElementById('edit-dni').value.trim();
+    window.db.Alumnos[index].nacemento = document.getElementById('edit-nace').value;
+    window.db.Alumnos[index].tlf = document.getElementById('edit-tel').value.trim();
+    window.db.Alumnos[index].email = document.getElementById('edit-email').value.trim();
+    window.db.Alumnos[index].direccion = document.getElementById('edit-dir').value.trim();
+    
+    saveData();
+    closeModal();
+    renderizarListaAlumnos(document.getElementById('search-alumno')?.value || "");
+}
+
 function marcarAsistenciaRapida(index, fecha, valor) {
     if (!window.db.Alumnos[index].asistencias) window.db.Alumnos[index].asistencias = {};
     window.db.Alumnos[index].asistencias[fecha] = valor;
@@ -148,34 +201,15 @@ function verHistorialAsistencias(index) {
     document.getElementById('modal-overlay').classList.add('active');
 }
 
-function editarAlumno(index) {
-    const al = window.db.Alumnos[index];
-    const modalBody = document.getElementById('modal-body');
-    modalBody.innerHTML = `
-        <div style="padding:10px; max-height:75vh; overflow-y:auto; text-align:left;">
-            <h2 style="color:#005696; margin-top:0;">Editar Alumno</h2>
-            <input type="text" id="edit-al-nome" value="${al.nome || ''}" style="width:100%; padding:10px; margin-bottom:10px; box-sizing:border-box;">
-            <input type="text" id="edit-al-apelidos" value="${al.apelidos || ''}" style="width:100%; padding:10px; margin-bottom:10px; box-sizing:border-box;">
-            <button onclick="actualizarAlumno(${index})" style="width:100%; background:#005696; color:white; padding:15px; border:none; border-radius:10px; font-weight:bold;">GARDAR CAMBIOS</button>
-        </div>
-    `;
-    document.getElementById('modal-overlay').classList.add('active');
-}
-
-function actualizarAlumno(index) {
-    window.db.Alumnos[index].nome = document.getElementById('edit-al-nome').value.trim();
-    window.db.Alumnos[index].apelidos = document.getElementById('edit-al-apelidos').value.trim();
-    saveData(); closeModal(); renderizarListaAlumnos();
-}
-
 function nuevoAlumno(filtro = "") {
     const modalBody = document.getElementById('modal-body');
     modalBody.innerHTML = `
-        <div style="padding:10px; text-align:left;">
-            <h2 style="color:#005696;">Novo Alumno</h2>
-            <input type="text" id="al-nome" placeholder="Nome" style="width:100%; padding:10px; margin-bottom:10px; box-sizing:border-box;">
-            <input type="text" id="al-apelidos" placeholder="Apelidos" style="width:100%; padding:10px; margin-bottom:10px; box-sizing:border-box;">
-            <button onclick="gardarAlumno('${filtro}')" style="width:100%; background:#005696; color:white; padding:15px; border:none; border-radius:10px;">GARDAR</button>
+        <div style="padding:15px; text-align:left;">
+            <h2 style="color:#005696; text-align:center;">NOVO ALUMNO</h2>
+            <input type="text" id="al-nome" placeholder="Nome" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
+            <input type="text" id="al-apelidos" placeholder="Apelidos" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
+            <input type="text" id="al-tel" placeholder="Teléfono" style="width:100%; padding:12px; margin-bottom:15px; border:1px solid #ddd; border-radius:8px;">
+            <button onclick="gardarAlumno('${filtro}')" style="width:100%; background:#005696; color:white; padding:15px; border:none; border-radius:12px; font-weight:bold;">GARDAR ALUMNO</button>
         </div>
     `;
     document.getElementById('modal-overlay').classList.add('active');
@@ -184,14 +218,22 @@ function nuevoAlumno(filtro = "") {
 function gardarAlumno(filtro) {
     const nome = document.getElementById('al-nome').value.trim();
     if (!nome) return alert("O nome é obrigatorio");
-    window.db.Alumnos.push({ nome, apelidos: document.getElementById('al-apelidos').value.trim(), act: filtro, estado: "Espera", asistencias: {} });
+    window.db.Alumnos.push({ 
+        nome, 
+        apelidos: document.getElementById('al-apelidos').value.trim(), 
+        tlf: document.getElementById('al-tel').value.trim(),
+        act: filtro, 
+        estado: "Espera", 
+        asistencias: {} 
+    });
     saveData(); closeModal(); mostrarAlumnos(filtro);
 }
 
 function borrarAlumno(index) {
-    if (confirm("¿Borrar?")) {
+    if (confirm("¿Seguro que queres eliminar este alumno?")) {
         window.db.Alumnos.splice(index, 1);
-        saveData(); renderizarListaAlumnos();
+        saveData(); 
+        renderizarListaAlumnos(document.getElementById('search-alumno')?.value || "");
     }
 }
 
