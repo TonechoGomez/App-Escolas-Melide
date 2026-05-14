@@ -14,28 +14,29 @@ function mostrarAulas() {
         </div>
     `;
     
-    // VALIDACIÓN DE DATOS (Solución al error de lectura en web)
-    if (!window.db || !window.db.Aulas) {
-        container.innerHTML = `<div style="text-align:center; color:white; padding:40px;">Cargando datos da nube...</div>`;
-        return; 
-    }
-
+    // Aseguramos que exista el genérico de Parroquias y que todas tengan el array de lugares
     verificarEstructuraAulas();
 
-    // Ordenar para la vista
-    const listaOrdenada = [...window.db.Aulas].sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+    // CONEXIÓN CON LOS DATOS DE LA WEB
+    const listaAulas = window.db.Aulas || [];
+
+    if (listaAulas.length > 0) {
+        listaAulas.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+    }
     
-    renderListaAulas(listaOrdenada);
+    renderListaAulas(listaAulas);
 }
 
 function verificarEstructuraAulas() {
     if (!window.db.Aulas) window.db.Aulas = [];
     
-    let tieneParroquias = window.db.Aulas.some(a => a.nome.toUpperCase() === "PARROQUIAS");
+    // 1. Crear el genérico de Parroquias si no existe
+    let tieneParroquias = window.db.Aulas.some(a => a.nome && a.nome.toUpperCase() === "PARROQUIAS");
     if (!tieneParroquias) {
         window.db.Aulas.push({ nome: "PARROQUIAS", lugares: [] });
     }
 
+    // 2. Asegurar que todas tengan array de lugares
     window.db.Aulas.forEach(a => {
         if (!a.lugares) a.lugares = [];
     });
@@ -52,16 +53,15 @@ function renderListaAulas(lista) {
         const card = document.createElement('div');
         card.style.cssText = "background:white; padding:25px; border-radius:20px; text-align:center; cursor:pointer; box-shadow:0 4px 15px rgba(0,0,0,0.1); border-top:8px solid #005696; color:#333;";
         
-        const esParroquia = aula.nome.toUpperCase() === "PARROQUIAS";
-        const totalLugares = (aula.lugares || []).length;
+        const esParroquia = aula.nome && aula.nome.toUpperCase() === "PARROQUIAS";
+        const numLugares = (aula.lugares || []).length;
         
         card.innerHTML = `
             <span style="font-size:3rem; display:block; margin-bottom:10px;">${esParroquia ? '📍' : '🏢'}</span>
             <h3 style="margin:0; font-size:1.2rem; color:#005696; text-transform:uppercase;">${aula.nome}</h3>
-            <p style="margin:10px 0 0; font-size:0.85rem; color:#64748b;">${totalLugares} Localizacións</p>
+            <p style="margin:10px 0 0; font-size:0.85rem; color:#64748b;">${numLugares} Localizacións</p>
         `;
 
-        // Buscamos el índice real en la base de datos original para que la edición funcione
         const realIdx = window.db.Aulas.findIndex(a => a.nome === aula.nome);
         card.onclick = () => abrirGestionLugares(realIdx);
         container.appendChild(card);
@@ -115,7 +115,7 @@ function engadirLugarALista(idx) {
 
     if (!window.db.Aulas[idx].lugares.includes(valor)) {
         window.db.Aulas[idx].lugares.push(valor);
-        if (typeof saveData === 'function') saveData();
+        if (typeof saveData === 'function') { saveData(); }
         document.getElementById('lista-lugares-modal').innerHTML = renderHtmlLugares(window.db.Aulas[idx].lugares, idx);
         input.value = "";
         mostrarAulas(); 
@@ -127,7 +127,7 @@ function engadirLugarALista(idx) {
 function eliminarLugarDeLista(aulaIdx, lugarIdx) {
     if (confirm("¿Eliminar esta localización?")) {
         window.db.Aulas[aulaIdx].lugares.splice(lugarIdx, 1);
-        if (typeof saveData === 'function') saveData();
+        if (typeof saveData === 'function') { saveData(); }
         document.getElementById('lista-lugares-modal').innerHTML = renderHtmlLugares(window.db.Aulas[aulaIdx].lugares, aulaIdx);
         mostrarAulas();
     }
@@ -136,7 +136,7 @@ function eliminarLugarDeLista(aulaIdx, lugarIdx) {
 function borrarInstalacionCompleta(idx) {
     if (confirm("¿ESTÁS SEGURO? Eliminarás toda a instalación e as súas localizacións.")) {
         window.db.Aulas.splice(idx, 1);
-        if (typeof saveData === 'function') saveData();
+        if (typeof saveData === 'function') { saveData(); }
         closeModal();
         mostrarAulas();
     }
@@ -163,7 +163,7 @@ function guardarAula() {
     if (nome) { 
         if (!window.db.Aulas) window.db.Aulas = [];
         window.db.Aulas.push({ nome: nome, lugares: [] }); 
-        if (typeof saveData === 'function') saveData(); 
+        if (typeof saveData === 'function') { saveData(); }
         closeModal(); 
         mostrarAulas(); 
     }
