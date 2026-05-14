@@ -7,6 +7,15 @@ function mostrarAulas() {
     const container = document.getElementById('data-container');
     if (!actions || !container) return;
 
+    // --- PROTECCIÓN DE CARGA PARA WEB ---
+    // Si la base de datos aún no ha descargado de la nube, esperamos medio segundo y reintentamos
+    if (!window.db || !window.db.Aulas || window.db.Aulas.length === 0) {
+        container.innerHTML = `<div style="text-align:center; color:white; padding:40px; font-weight:bold;">CARGANDO DATOS DA NUBE...</div>`;
+        setTimeout(mostrarAulas, 500); 
+        return;
+    }
+    // -------------------------------------
+
     actions.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:20px;">
             <h2 style="margin:0; color:white; font-size:1.4rem;">INSTALACIÓNS</h2>
@@ -17,12 +26,9 @@ function mostrarAulas() {
     // Aseguramos que exista el genérico de Parroquias y que todas tengan el array de lugares
     verificarEstructuraAulas();
 
-    // CONEXIÓN CON LOS DATOS DE LA WEB
-    const listaAulas = window.db.Aulas || [];
-
-    if (listaAulas.length > 0) {
-        listaAulas.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
-    }
+    // Usamos los datos confirmados en la consola
+    const listaAulas = window.db.Aulas;
+    listaAulas.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
     
     renderListaAulas(listaAulas);
 }
