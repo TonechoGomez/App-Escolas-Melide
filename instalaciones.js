@@ -7,14 +7,16 @@ function mostrarAulas() {
     const container = document.getElementById('data-container');
     if (!actions || !container) return;
 
-    // --- PROTECCIÓN DE CARGA PARA WEB ---
-    // Si la base de datos aún no ha descargado de la nube, esperamos medio segundo y reintentamos
+    // --- SISTEMA DE ESPERA ACTIVA (Solución para la Web) ---
+    // Si window.db no existe o Aulas está vacío, esperamos a la nube
     if (!window.db || !window.db.Aulas || window.db.Aulas.length === 0) {
         container.innerHTML = `<div style="text-align:center; color:white; padding:40px; font-weight:bold;">CARGANDO DATOS DA NUBE...</div>`;
+        
+        // Reintentamos cada 500ms hasta que los datos confirmados en consola se carguen
         setTimeout(mostrarAulas, 500); 
         return;
     }
-    // -------------------------------------
+    // -------------------------------------------------------
 
     actions.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:20px;">
@@ -23,11 +25,11 @@ function mostrarAulas() {
         </div>
     `;
     
-    // Aseguramos que exista el genérico de Parroquias y que todas tengan el array de lugares
+    // Ejecutamos tu lógica original de verificación
     verificarEstructuraAulas();
 
-    // Usamos los datos confirmados en la consola
-    const listaAulas = window.db.Aulas;
+    // Ordenamos la lista que ya sabemos que tiene datos
+    const listaAulas = [...window.db.Aulas];
     listaAulas.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
     
     renderListaAulas(listaAulas);
@@ -42,7 +44,7 @@ function verificarEstructuraAulas() {
         window.db.Aulas.push({ nome: "PARROQUIAS", lugares: [] });
     }
 
-    // 2. Asegurar que todas tengan array de lugares
+    // 2. Asegurar que todas tengan array de lugares para evitar errores de lectura
     window.db.Aulas.forEach(a => {
         if (!a.lugares) a.lugares = [];
     });
