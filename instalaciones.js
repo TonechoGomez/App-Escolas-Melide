@@ -14,7 +14,6 @@ function mostrarAulas() {
         </div>
     `;
     
-    // Aseguramos que exista el genérico de Parroquias y que todas tengan el array de lugares
     verificarEstructuraAulas();
 
     if (window.db.Aulas) {
@@ -26,131 +25,119 @@ function mostrarAulas() {
 
 function verificarEstructuraAulas() {
     if (!window.db.Aulas) window.db.Aulas = [];
-    
-    // 1. Crear el genérico de Parroquias si no existe
-    let tieneParroquias = window.db.Aulas.some(a => a.nome.toUpperCase() === "PARROQUIAS");
-    if (!tieneParroquias) {
+    let parroquias = window.db.Aulas.find(a => a.nome.toUpperCase() === "PARROQUIAS");
+    if (!parroquias) {
         window.db.Aulas.push({ nome: "PARROQUIAS", lugares: [] });
     }
-
-    // 2. Asegurar que todas tengan array de lugares
-    window.db.Aulas.forEach(a => {
-        if (!a.lugares) a.lugares = [];
-    });
-    saveData();
 }
 
 function renderListaAulas(lista) {
     const container = document.getElementById('data-container');
-    container.style.display = "grid";
-    container.style.gridTemplateColumns = "repeat(auto-fill, minmax(280px, 1fr))"; 
-    container.style.gap = "20px";
     container.innerHTML = "";
+    container.style.display = "grid";
+    container.style.gridTemplateColumns = "repeat(auto-fill, minmax(250px, 1fr))";
+    container.style.gap = "20px";
 
-    lista.forEach((aula) => {
+    lista.forEach((aula, idx) => {
         const card = document.createElement('div');
-        card.style.cssText = "background:white; padding:25px; border-radius:20px; text-align:center; cursor:pointer; box-shadow:0 4px 15px rgba(0,0,0,0.1); border-top:8px solid #005696; color:#333;";
+        card.style.cssText = "background:white; color:#1e293b; padding:25px; border-radius:20px; text-align:center; cursor:pointer; box-shadow:0 10px 20px rgba(0,0,0,0.2); position:relative;";
         
-        const esParroquia = aula.nome.toUpperCase() === "PARROQUIAS";
-        
-        card.innerHTML = `
-            <span style="font-size:3rem; display:block; margin-bottom:10px;">${esParroquia ? '📍' : '🏢'}</span>
-            <h3 style="margin:0; font-size:1.2rem; color:#005696; text-transform:uppercase;">${aula.nome}</h3>
-            <p style="margin:10px 0 0; font-size:0.85rem; color:#64748b;">${aula.lugares.length} Localizacións</p>
-        `;
+        const numLugares = (aula.lugares || []).length;
+        const subInfo = aula.nome.toUpperCase() === "PARROQUIAS" 
+            ? `<div style="font-size:0.8rem; color:#64748b; margin-top:5px;">${numLugares} LOCALIZACIÓNS</div>`
+            : "";
 
-        const realIdx = window.db.Aulas.findIndex(a => a.nome === aula.nome);
-        card.onclick = () => abrirGestionLugares(realIdx);
+        card.innerHTML = `
+            <span style="font-size:3rem; display:block; margin-bottom:10px;">🏛️</span>
+            <div style="font-weight:bold; text-transform:uppercase;">${aula.nome}</div>
+            ${subInfo}
+            <button onclick="event.stopPropagation(); borrarAula(${idx})" style="position:absolute; top:10px; right:10px; background:none; border:none; color:#ef4444; font-size:1.2rem; cursor:pointer;">&times;</button>
+        `;
+        
+        card.onclick = () => {
+            if (aula.nome.toUpperCase() === "PARROQUIAS") {
+                verDetalleParroquias(idx);
+            }
+        };
         container.appendChild(card);
     });
 }
 
-function abrirGestionLugares(idx) {
-    const aula = window.db.Aulas[idx];
-    const modalBody = document.getElementById('modal-body');
-    
-    modalBody.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; background:#f1f5f9; padding:15px 20px; border-radius:25px 25px 0 0; border-bottom:1px solid #e2e8f0;">
-            <span style="font-weight:bold; color:#64748b; font-size:0.85rem; text-transform:uppercase;">XESTIÓN DE LOCALIZACIÓNS</span>
-            <button onclick="closeModal()" style="background:#cbd5e1; border:none; color:white; width:30px; height:30px; border-radius:50%; font-size:1.2rem; cursor:pointer; font-weight:bold;">&times;</button>
+function verDetalleParroquias(idxAula) {
+    const aula = window.db.Aulas[idxAula];
+    if (!aula.lugares) aula.lugares = [];
+
+    const container = document.getElementById('data-container');
+    const actions = document.getElementById('section-actions');
+
+    actions.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+            <h2 style="margin:0; color:white;">📍 LOCALIZACIÓNS PARROQUIAS</h2>
+            <div style="display:flex; gap:10px;">
+                <button onclick="formLugar(${idxAula})" style="background:#f59e0b; color:white; padding:10px; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">+ ENGADIR NOVO</button>
+                <button onclick="mostrarAulas()" style="background:#475569; color:white; padding:10px; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">VOLVER</button>
+            </div>
         </div>
-        <div style="padding:20px; text-align:left;">
-            <h2 style="margin:0 0 15px; color:#005696; text-transform:uppercase; font-size:1.2rem;">${aula.nome}</h2>
-            
-            <div style="display:flex; gap:10px; margin-bottom:20px;">
-                <input type="text" id="nuevo-lugar-input" placeholder="Engadir nova localización..." style="flex:1; padding:12px; border-radius:10px; border:1px solid #ddd; text-transform:uppercase;">
-                <button onclick="engadirLugarALista(${idx})" style="background:#16a34a; color:white; border:none; border-radius:10px; padding:0 20px; font-weight:bold; cursor:pointer;">+</button>
-            </div>
+    `;
 
-            <div id="lista-lugares-modal" style="max-height:250px; overflow-y:auto; border:1px solid #eee; border-radius:12px; padding:10px; background:#f8fafc;">
-                ${renderHtmlLugares(aula.lugares, idx)}
-            </div>
+    container.innerHTML = "";
+    if (aula.lugares.length === 0) {
+        container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:white; padding:40px;">Non hai lugares rexistrados.</div>`;
+    } else {
+        // Ordenar lugares alfabéticamente
+        aula.lugares.sort().forEach((lugar, idxLugar) => {
+            const card = document.createElement('div');
+            card.style.cssText = "background:#f1f5f9; color:#334155; padding:15px 20px; border-radius:15px; display:flex; justify-content:space-between; align-items:center; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.1);";
+            card.innerHTML = `
+                <span style="font-size:0.9rem;">${lugar.toUpperCase()}</span>
+                <button onclick="borrarLugar(${idxAula}, ${aula.lugares.indexOf(lugar)})" style="background:#ef4444; color:white; border:none; width:30px; height:30px; border-radius:50%; cursor:pointer; font-weight:bold;">&times;</button>
+            `;
+            container.appendChild(card);
+        });
+    }
+}
 
-            <div style="margin-top:20px; padding-top:15px; border-top:1px solid #eee;">
-                <button onclick="borrarInstalacionCompleta(${idx})" style="width:100%; background:#fee2e2; color:#dc2626; padding:10px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:0.8rem;">ELIMINAR TODA A INSTALACIÓN</button>
-            </div>
+function formLugar(idxAula) {
+    const body = document.getElementById('modal-body');
+    body.innerHTML = `
+        <div style="padding:10px; max-width: 100%; box-sizing: border-box;">
+            <h3 style="color:#005696; margin-top:0;">Engadir Localización</h3>
+            <p style="font-size:0.8rem; color:#64748b;">Escribe o nome da nova parroquia ou lugar:</p>
+            <input type="text" id="new-lugar" placeholder="EX: MACEDA, VITIRIZ..." style="width:100%; padding:15px; border-radius:12px; border:1px solid #ddd; text-transform:uppercase; box-sizing:border-box; margin-bottom:20px; font-size:1rem;">
+            <button onclick="guardarLugar(${idxAula})" style="width:100%; background:#16a34a; color:white; padding:15px; border:none; border-radius:12px; font-weight:bold; cursor:pointer; font-size:1rem;">GARDAR LUGAR</button>
         </div>
     `;
     document.getElementById('modal-overlay').classList.add('active');
 }
 
-function renderHtmlLugares(lugares, aulaIdx) {
-    if (lugares.length === 0) return `<p style="text-align:center; color:#94a3b8; font-size:0.9rem;">Non hai localizacións gardadas</p>`;
+function guardarLugar(idxAula) {
+    const nome = document.getElementById('new-lugar').value.trim().toUpperCase();
+    if (!nome) return;
+    if (!window.db.Aulas[idxAula].lugares) window.db.Aulas[idxAula].lugares = [];
     
-    return lugares.map((lugar, i) => `
-        <div style="display:flex; justify-content:space-between; align-items:center; background:white; padding:10px 15px; border-radius:8px; margin-bottom:8px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-            <span style="font-weight:500; color:#334155;">${lugar}</span>
-            <button onclick="eliminarLugarDeLista(${aulaIdx}, ${i})" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:1rem;">🗑️</button>
-        </div>
-    `).join('');
-}
-
-function engadirLugarALista(idx) {
-    const input = document.getElementById('nuevo-lugar-input');
-    const valor = input.value.trim().toUpperCase();
-    if (!valor) return;
-
-    if (!window.db.Aulas[idx].lugares.includes(valor)) {
-        window.db.Aulas[idx].lugares.push(valor);
+    if (!window.db.Aulas[idxAula].lugares.includes(nome)) {
+        window.db.Aulas[idxAula].lugares.push(nome);
         saveData();
-        // Refrescar el modal y la lista de fondo
-        document.getElementById('lista-lugares-modal').innerHTML = renderHtmlLugares(window.db.Aulas[idx].lugares, idx);
-        input.value = "";
-        mostrarAulas(); 
-    } else {
-        alert("Esta localización xa existe.");
     }
+    closeModal();
+    verDetalleParroquias(idxAula);
 }
 
-function eliminarLugarDeLista(aulaIdx, lugarIdx) {
-    if (confirm("¿Eliminar esta localización?")) {
-        window.db.Aulas[aulaIdx].lugares.splice(lugarIdx, 1);
+function borrarLugar(idxAula, idxLugar) {
+    if (confirm("¿Borrar definitivamente este lugar?")) {
+        window.db.Aulas[idxAula].lugares.splice(idxLugar, 1);
         saveData();
-        document.getElementById('lista-lugares-modal').innerHTML = renderHtmlLugares(window.db.Aulas[aulaIdx].lugares, aulaIdx);
-        mostrarAulas();
-    }
-}
-
-function borrarInstalacionCompleta(idx) {
-    if (confirm("¿ESTÁS SEGURO? Eliminarás toda a instalación e as súas localizacións.")) {
-        window.db.Aulas.splice(idx, 1);
-        saveData();
-        closeModal();
-        mostrarAulas();
+        verDetalleParroquias(idxAula);
     }
 }
 
 function formAula() {
     const body = document.getElementById('modal-body');
     body.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; background:#f1f5f9; padding:15px 20px; border-radius:25px 25px 0 0; border-bottom:1px solid #e2e8f0;">
-            <span style="font-weight:bold; color:#64748b; font-size:0.85rem; text-transform:uppercase;">NOVA INSTALACIÓN</span>
-            <button onclick="closeModal()" style="background:#cbd5e1; border:none; color:white; width:30px; height:30px; border-radius:50%; font-size:1.2rem; cursor:pointer; font-weight:bold;">&times;</button>
-        </div>
-        <div style="padding:20px; text-align:left;">
-            <label style="font-weight:bold; font-size:0.8rem; color:#64748b; display:block; margin-bottom:8px;">NOME DO EDIFICIO / GRUPO</label>
-            <input type="text" id="a-nome" placeholder="EX: PABELLÓN, PISCINA, PARROQUIAS..." style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd; text-transform:uppercase; box-sizing:border-box; margin-bottom:15px;">
-            <button onclick="guardarAula()" style="width:100%; background:#16a34a; color:white; padding:15px; border:none; border-radius:12px; font-weight:bold; cursor:pointer;">CREAR INSTALACIÓN</button>
+        <div style="padding:10px; box-sizing: border-box;">
+            <h3 style="color:#005696; margin-top:0;">Nova Instalación</h3>
+            <input type="text" id="a-nome" placeholder="NOME (PABELLÓN, PISCINA...)" style="width:100%; padding:15px; border-radius:12px; border:1px solid #ddd; text-transform:uppercase; box-sizing:border-box; margin-bottom:20px; font-size:1rem;">
+            <button onclick="guardarAula()" style="width:100%; background:#16a34a; color:white; padding:15px; border:none; border-radius:12px; font-weight:bold; cursor:pointer; font-size:1rem;">CREAR</button>
         </div>
     `;
     document.getElementById('modal-overlay').classList.add('active');
@@ -158,15 +145,17 @@ function formAula() {
 
 function guardarAula() {
     const nome = document.getElementById('a-nome').value.trim().toUpperCase();
-    if (nome) { 
-        if (!window.db.Aulas) window.db.Aulas = [];
-        window.db.Aulas.push({ nome: nome, lugares: [] }); 
-        saveData(); 
-        closeModal(); 
-        mostrarAulas(); 
-    }
+    if (!nome) return;
+    window.db.Aulas.push({ nome: nome, lugares: [] });
+    saveData();
+    closeModal();
+    mostrarAulas();
 }
 
-function closeModal() { 
-    document.getElementById('modal-overlay').classList.remove('active'); 
+function borrarAula(idx) {
+    if (confirm("¿Borrar esta instalación e todos os seus datos?")) {
+        window.db.Aulas.splice(idx, 1);
+        saveData();
+        mostrarAulas();
+    }
 }
