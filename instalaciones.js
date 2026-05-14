@@ -7,13 +7,12 @@ function mostrarAulas() {
     const container = document.getElementById('data-container');
     if (!actions || !container) return;
 
-    // --- PROTECCIÓN PARA LA WEB (Espera a Google) ---
+    // ESPERA ACTIVA PARA LA WEB
     if (!window.db || !window.db.Aulas || window.db.Aulas.length === 0) {
         container.innerHTML = `<div style="text-align:center; color:white; padding:40px; font-weight:bold;">CONECTANDO COA NUBE...</div>`;
         setTimeout(mostrarAulas, 500); 
         return;
     }
-    // ------------------------------------------------
 
     actions.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:20px;">
@@ -23,10 +22,7 @@ function mostrarAulas() {
     `;
     
     verificarEstructuraAulas();
-
-    const listaAulas = [...window.db.Aulas];
-    listaAulas.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
-    
+    const listaAulas = [...window.db.Aulas].sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
     renderListaAulas(listaAulas);
 }
 
@@ -107,7 +103,7 @@ function engadirLugarALista(idx) {
     if (!valor) return;
     if (!window.db.Aulas[idx].lugares.includes(valor)) {
         window.db.Aulas[idx].lugares.push(valor);
-        if (typeof saveData === 'function') { saveData(); }
+        saveData();
         document.getElementById('lista-lugares-modal').innerHTML = renderHtmlLugares(window.db.Aulas[idx].lugares, idx);
         input.value = "";
         mostrarAulas(); 
@@ -117,16 +113,16 @@ function engadirLugarALista(idx) {
 function eliminarLugarDeLista(aulaIdx, lugarIdx) {
     if (confirm("¿Eliminar esta localización?")) {
         window.db.Aulas[aulaIdx].lugares.splice(lugarIdx, 1);
-        if (typeof saveData === 'function') { saveData(); }
+        saveData();
         document.getElementById('lista-lugares-modal').innerHTML = renderHtmlLugares(window.db.Aulas[aulaIdx].lugares, aulaIdx);
         mostrarAulas();
     }
 }
 
 function borrarInstalacionCompleta(idx) {
-    if (confirm("¿ESTÁS SEGURO? Eliminarás toda a instalación.")) {
+    if (confirm("¿ESTÁS SEGURO?")) {
         window.db.Aulas.splice(idx, 1);
-        if (typeof saveData === 'function') { saveData(); }
+        saveData();
         closeModal();
         mostrarAulas();
     }
@@ -141,7 +137,7 @@ function formAula() {
         </div>
         <div style="padding:20px; text-align:left;">
             <label style="font-weight:bold; font-size:0.8rem; color:#64748b; display:block; margin-bottom:8px;">NOME DO EDIFICIO / GRUPO</label>
-            <input type="text" id="a-nome" placeholder="EX: PABELLÓN, PISCINA..." style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd; text-transform:uppercase; margin-bottom:15px;">
+            <input type="text" id="a-nome" style="width:100%; padding:12px; border-radius:10px; border:1px solid #ddd; text-transform:uppercase; margin-bottom:15px;">
             <button onclick="guardarAula()" style="width:100%; background:#16a34a; color:white; padding:15px; border:none; border-radius:12px; font-weight:bold; cursor:pointer;">CREAR INSTALACIÓN</button>
         </div>
     `;
@@ -152,8 +148,9 @@ function guardarAula() {
     const nome = document.getElementById('a-nome').value.trim().toUpperCase();
     if (nome) { 
         window.db.Aulas.push({ nome: nome, lugares: [] }); 
-        if (typeof saveData === 'function') { saveData(); }
-        closeModal(); mostrarAulas(); 
+        saveData();
+        closeModal(); 
+        mostrarAulas(); 
     }
 }
 

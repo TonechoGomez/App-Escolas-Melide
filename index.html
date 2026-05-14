@@ -24,150 +24,107 @@
         }
 
         #scr-dash { 
-            flex: 1; 
-            overflow-y: auto; 
-            padding: 40px 20px;
-            display: none;
+            flex: 1; overflow-y: auto; padding: 40px 20px; display: none; 
         }
 
-        #menu-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 25px;
-            max-width: 1200px;
-            margin: 0 auto;
+        .menu-grid { 
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+            gap: 30px; max-width: 1000px; margin: 0 auto; 
         }
 
-        #scr-edit {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            display: none;
+        .menu-item { 
+            background: white; color: var(--melide-primary); padding: 60px 30px; 
+            border-radius: 30px; text-align: center; font-weight: bold; 
+            display: flex; flex-direction: column; align-items: center; 
+            justify-content: center; gap: 25px; cursor: pointer; 
+            box-shadow: 0 12px 25px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
         }
 
+        .menu-item:active { transform: scale(0.96); box-shadow: 0 5px 10px rgba(0,0,0,0.2); }
+        .menu-item span { font-size: 5.5rem; display: block; }
+        .menu-item label { font-size: 1.5rem; letter-spacing: 1.5px; cursor: pointer; text-transform: uppercase; }
+
+        #scr-inicio { 
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; 
+        }
+
+        .pin-container { display: flex; gap: 10px; justify-content: center; margin-bottom: 25px; }
+        .pin-input { 
+            width: 55px; height: 70px; text-align: center; font-size: 2rem; border-radius: 12px; border: none; background: white; color: #333; 
+        }
+
+        .btn-login { 
+            width: 100%; padding: 18px; border-radius: 12px; border: none; background: #2563eb; color: white; font-weight: bold; cursor: pointer; font-size: 1.1rem; 
+        }
+
+        #scr-edit { flex: 1; overflow-y: auto; padding: 20px; display: none; }
+        
         #modal-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.7);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            backdrop-filter: blur(5px);
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000;
         }
-
         #modal-overlay.active { display: flex; }
-
-        #modal-body {
-            background: white;
-            width: 90%;
-            max-width: 500px;
-            border-radius: 25px;
-            overflow: hidden;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-            color: #333;
+        .modal-content {
+            background: white; color: #333; padding: 30px; border-radius: 25px; width: 90%; max-width: 450px; position: relative;
         }
 
-        .pin-container {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-bottom: 30px;
-        }
-
-        .pin-input {
-            width: 50px;
-            height: 60px;
-            text-align: center;
-            font-size: 1.5rem;
-            border-radius: 12px;
-            border: 2px solid rgba(255,255,255,0.2);
-            background: rgba(255,255,255,0.1);
-            color: white;
-        }
-
-        select, input {
-            font-size: 16px !important;
-        }
+        .header-btn { background:none; border:none; color:white; font-size: 1.8rem; cursor:pointer; padding: 5px 10px; }
     </style>
 </head>
 <body>
-
     <header id="main-header">
-        <div style="display:flex; align-items:center; gap:10px;">
-            <img src="Escudo Meldie.webp" alt="Logo" style="height:40px; filter: drop-shadow(0 0 5px rgba(255,255,255,0.5));">
-            <span style="font-weight:900; letter-spacing:1px; font-size:1.1rem;">MELIDE DEPORTES</span>
+        <button class="header-btn" id="btn-atras" onclick="atras()" style="display: none;">&#8592;</button>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <img src="Escudo Meldie.webp" alt="Logo" style="height: 45px; object-fit: contain;">
+            <span style="font-weight: bold; letter-spacing: 1.5px; font-size: 1.1rem;">MELIDE DEPORTES</span>
         </div>
-        <button id="btn-atras" onclick="volverAlDash()" style="display:none; background:rgba(255,255,255,0.2); color:white; border:none; padding:8px 15px; border-radius:8px; font-weight:bold; cursor:pointer;">⬅ VOLVER</button>
+        <button class="header-btn" onclick="location.reload()">&#127968;</button>
     </header>
 
-    <div id="scr-inicio" style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:20px;">
-        <img src="Escudo Meldie.webp" alt="Logo" style="width:120px; margin-bottom:30px; filter: drop-shadow(0 0 15px rgba(255,255,255,0.3));">
-        <h1 style="margin:0 0 10px; font-size:1.8rem; font-weight:900;">XESTIÓN DEPORTIVA</h1>
-        <p style="margin:0 0 40px; opacity:0.7; font-size:0.9rem;">CONCELLO DE MELIDE</p>
-
-        <div style="background:rgba(255,255,255,0.05); padding:30px; border-radius:30px; border:1px solid rgba(255,255,255,0.1); width:100%; max-width:320px; box-sizing:border-box;">
-            <label style="display:block; margin-bottom:10px; font-size:0.8rem; font-weight:bold; opacity:0.6;">IDENTIFICACIÓN</label>
-            <select id="user-role" style="width:100%; padding:15px; border-radius:12px; border:none; background:#005696; color:white; font-weight:bold; margin-bottom:25px; cursor:pointer;">
-                <option value="monitor">MONITOR/A</option>
-                <option value="tecnico">TÉCNICO DEPORTIVO</option>
-                <option value="politico">CONCELLEIRO/A</option>
+    <div id="scr-inicio">
+        <img src="Escudo Meldie.webp" alt="Logo" style="width: 140px; margin-bottom: 40px; object-fit: contain;">
+        <div style="background: rgba(255,255,255,0.15); backdrop-filter: blur(15px); padding: 40px; border-radius: 25px; width: 100%; max-width: 350px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
+            <select id="user-role" style="width: 100%; padding: 15px; margin-bottom: 25px; border-radius: 12px; border: none; font-weight: bold; font-size: 1rem;">
+                <option value="tecnico">TÉCNICO</option>
+                <option value="monitor">MONITOR</option>
+                <option value="politico">POLÍTICO</option>
             </select>
-
-            <label style="display:block; margin-bottom:10px; font-size:0.8rem; font-weight:bold; opacity:0.6;">CÓDIGO PIN</label>
             <div class="pin-container">
-                <input type="password" maxlength="1" class="pin-input" inputmode="numeric">
-                <input type="password" maxlength="1" class="pin-input" inputmode="numeric">
-                <input type="password" maxlength="1" class="pin-input" inputmode="numeric">
-                <input type="password" maxlength="1" class="pin-input" inputmode="numeric">
+                <input type="password" class="pin-input" maxlength="1" inputmode="numeric">
+                <input type="password" class="pin-input" maxlength="1" inputmode="numeric">
+                <input type="password" class="pin-input" maxlength="1" inputmode="numeric">
+                <input type="password" class="pin-input" maxlength="1" inputmode="numeric">
             </div>
-
-            <button onclick="login()" style="width:100%; background:#16a34a; color:white; border:none; padding:18px; border-radius:15px; font-weight:900; font-size:1rem; cursor:pointer; box-shadow: 0 10px 20px rgba(22,163,74,0.3);">ENTRAR NO SISTEMA</button>
+            <button class="btn-login" onclick="login()">ENTRAR</button>
         </div>
     </div>
 
-    <div id="scr-dash">
-        <div id="menu-container"></div>
-    </div>
+    <div id="scr-dash"><div class="menu-grid" id="menu-container"></div></div>
+    <div id="scr-edit"><div id="section-actions"></div><div id="data-container"></div></div>
 
-    <div id="scr-edit">
-        <div id="section-actions" style="margin-bottom:20px;"></div>
-        <div id="data-container"></div>
-    </div>
+    <div id="modal-overlay" onclick="if(event.target === this) closeModal()"><div class="modal-content" id="modal-body"></div></div>
 
-    <div id="modal-overlay" onclick="if(event.target===this)closeModal()">
-        <div id="modal-body"></div>
-    </div>
-
-    <script>
-        function volverAlDash() {
-            document.getElementById('scr-edit').style.display = 'none';
-            document.getElementById('btn-atras').style.display = 'none';
-            document.getElementById('scr-dash').style.display = 'block';
-            document.getElementById('main-header').style.display = 'flex';
-        }
-
-        (function repairDB() {
-            if (!window.db) window.db = {};
-            ['Monitores', 'Actividades', 'Aulas', 'Alumnos'].forEach(table => {
-                if (!window.db[table]) window.db[table] = [];
-            });
-        })();
-    </script>
-
-    <script src="config.js"></script>
     <script src="sincronizacion.js"></script>
+    <script src="datos.js"></script>
     <script src="monitores.js"></script>
     <script src="actividades.js"></script>
     <script src="comunicacion.js"></script> 
     <script src="instalaciones.js"></script>
     <script src="alumnos.js"></script>
     <script src="cuadrantes.js"></script>
-    <script src="datos.js"></script>
     <script src="vistas.js"></script>
     <script src="seguridad.js"></script>
 
     <script>
+        function atras() {
+            document.getElementById('scr-edit').style.display = 'none';
+            document.getElementById('btn-atras').style.display = 'none';
+            document.getElementById('scr-dash').style.display = 'block';
+            document.getElementById('main-header').style.display = 'flex';
+        }
+        function closeModal() { document.getElementById('modal-overlay').classList.remove('active'); }
+        
         const pinInputs = document.querySelectorAll('.pin-input');
         pinInputs.forEach((input, index) => {
             input.addEventListener('input', (e) => {
