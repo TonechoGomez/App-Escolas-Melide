@@ -3,6 +3,7 @@
 // ==========================================
 
 function mostrarActividades() {
+    const container = document.getElementById('data-container');
     const actions = document.getElementById('section-actions');
     const scrDash = document.getElementById('scr-dash');
     const scrEdit = document.getElementById('scr-edit');
@@ -41,9 +42,13 @@ function renderizarListaActividades() {
     listaAct.sort((a, b) => (a.nome || "").toString().localeCompare((b.nome || "").toString(), 'es', { numeric: true }));
 
     container.style.display = "grid";
-    container.style.gridTemplateColumns = "repeat(auto-fill, minmax(280px, 1fr))"; 
+    container.style.gridTemplateColumns = "repeat(6, minmax(0, 1fr))"; 
     container.style.gap = "10px";
     container.innerHTML = "";
+
+    if (window.innerWidth < 1200) container.style.gridTemplateColumns = "repeat(4, 1fr)";
+    if (window.innerWidth < 900) container.style.gridTemplateColumns = "repeat(2, 1fr)";
+    if (window.innerWidth < 600) container.style.gridTemplateColumns = "repeat(1, 1fr)";
 
     listaAct.forEach((act) => {
         const valNombre = act.nome || "SEN NOME";
@@ -64,12 +69,12 @@ function renderizarListaActividades() {
         card.innerHTML = `
             <div style="margin-bottom:10px;">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                    <h3 style="margin:0; color:#005696; font-size:1.1rem; text-transform: uppercase; line-height:1.2; font-weight:800;">
+                    <h3 style="margin:0; color:#005696; font-size:1.1rem; text-transform: uppercase; line-height:1.2; font-weight:800;" title="${valNombre}">
                         ${valNombre}
                     </h3>
-                    <div style="display:flex; gap:8px;">
-                        <button onclick="editarActividad(${realIdx})" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:1rem;">✏️</button>
-                        <button onclick="borrarActividad(${realIdx})" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:1rem;">🗑️</button>
+                    <div style="display:flex; gap:8px; opacity:0.6;">
+                        <button onclick="editarActividad(${realIdx})" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:0.9rem; padding:0;">✏️</button>
+                        <button onclick="borrarActividad(${realIdx})" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:0.9rem; padding:0;">🗑️</button>
                     </div>
                 </div>
             </div>
@@ -107,24 +112,22 @@ function editarActividad(index) {
     }
 
     modalBody.innerHTML = `
-        <div style="padding:10px; text-align:left; max-width:100%; box-sizing:border-box;">
-            <h2 style="color:#005696; margin-top:0; font-size:1.3rem;">Editar Actividade</h2>
-            <div style="display:flex; flex-direction:column; gap:12px;">
-                <input type="text" id="edit-act-nome" value="${act.nome || ''}" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                <select id="edit-act-dia" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
-                    ${dias.map(d => `<option value="${d}" ${act.dia === d ? 'selected' : ''}>${d}</option>`).join('')}
-                </select>
-                <select id="edit-act-hora" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
-                    ${horasOptions}
-                </select>
-                <select id="edit-act-aula" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
-                    ${aulas.map(a => `<option value="${a.nome}" ${act.aula === a.nome ? 'selected' : ''}>${a.nome}</option>`).join('')}
-                </select>
-                <select id="edit-act-monitor" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
-                    ${monitores.map(m => `<option value="${m.nome}" ${act.monitor === m.nome ? 'selected' : ''}>${m.nome}</option>`).join('')}
-                </select>
-                <button onclick="actualizarActividade(${index})" style="width:100%; background:#005696; color:white; padding:15px; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">GARDAR CAMBIOS</button>
-            </div>
+        <h2 style="color:#005696; margin-top:0; font-size:1.3rem;">Editar Actividade</h2>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+            <input type="text" id="edit-act-nome" value="${act.nome || ''}" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+            <select id="edit-act-dia" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+                ${dias.map(d => `<option value="${d}" ${act.dia === d ? 'selected' : ''}>${d}</option>`).join('')}
+            </select>
+            <select id="edit-act-hora" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+                ${horasOptions}
+            </select>
+            <select id="edit-act-aula" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+                ${aulas.map(a => `<option value="${a.nome}" ${act.aula === a.nome ? 'selected' : ''}>${a.nome}</option>`).join('')}
+            </select>
+            <select id="edit-act-monitor" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+                ${monitores.map(m => `<option value="${m.nome}" ${act.monitor === m.nome ? 'selected' : ''}>${m.nome}</option>`).join('')}
+            </select>
+            <button onclick="actualizarActividade(${index})" style="width:100%; background:#005696; color:white; padding:15px; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">GARDAR CAMBIOS</button>
         </div>
     `;
     document.getElementById('modal-overlay').classList.add('active');
@@ -153,35 +156,33 @@ function nuevaActividad() {
         });
     }
     modalBody.innerHTML = `
-        <div style="padding:10px; text-align:left;">
-            <h2 style="color:#005696; margin-top:0;">Nova Actividade</h2>
-            <div style="display:flex; flex-direction:column; gap:10px;">
-                <input type="text" id="act-nome" placeholder="Nome" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
-                <select id="act-dia" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
-                    <option value="">Selecciona Día</option>
-                    ${dias.map(d => `<option value="${d}">${d}</option>`).join('')}
-                </select>
-                <select id="act-hora" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
-                    <option value="">Selecciona Hora</option>
-                    ${horasOptions}
-                </select>
-                <select id="act-aula" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
-                    <option value="">Selecciona Aula</option>
-                    ${aulas.map(a => `<option value="${a.nome}">${a.nome}</option>`).join('')}
-                </select>
-                <select id="act-monitor" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
-                    <option value="">Selecciona Monitor/a</option>
-                    ${monitores.map(m => `<option value="${m.nome}">${m.nome}</option>`).join('')}
-                </select>
-                <button onclick="gardarActividade()" style="background:#005696; color:white; padding:15px; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">GARDAR</button>
-            </div>
+        <h2 style="color:#005696; margin-top:0;">Nova Actividade</h2>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            <input type="text" id="act-nome" placeholder="Nome" style="padding:10px; border:1px solid #ddd; border-radius:8px;">
+            <select id="act-dia" style="padding:10px; border:1px solid #ddd; border-radius:8px;">
+                <option value="">Selecciona Día</option>
+                ${dias.map(d => `<option value="${d}">${d}</option>`).join('')}
+            </select>
+            <select id="act-hora" style="padding:10px; border:1px solid #ddd; border-radius:8px;">
+                <option value="">Selecciona Hora</option>
+                ${horasOptions}
+            </select>
+            <select id="act-aula" style="padding:10px; border:1px solid #ddd; border-radius:8px;">
+                <option value="">Selecciona Aula</option>
+                ${aulas.map(a => `<option value="${a.nome}">${a.nome}</option>`).join('')}
+            </select>
+            <select id="act-monitor" style="padding:10px; border:1px solid #ddd; border-radius:8px;">
+                <option value="">Selecciona Monitor/a</option>
+                ${monitores.map(m => `<option value="${m.nome}">${m.nome}</option>`).join('')}
+            </select>
+            <button onclick="gardarActividade()" style="background:#005696; color:white; padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">GARDAR</button>
         </div>
     `;
     document.getElementById('modal-overlay').classList.add('active');
 }
 
 function gardarActividade() {
-    const nome = document.getElementById('act-nome').value.trim();
+    const nome = document.getElementById('act-nome').value;
     if (!nome) return alert("O nome é obrigatorio");
     window.db.Actividades.push({ 
         nome, 
@@ -211,8 +212,4 @@ function abrirGestionWhatsApp(nomeAct) {
     } else {
         alert("Erro: O módulo de comunicación non está cargado.");
     }
-}
-
-function closeModal() {
-    document.getElementById('modal-overlay').classList.remove('active');
 }

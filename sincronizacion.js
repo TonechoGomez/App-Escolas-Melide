@@ -1,36 +1,27 @@
-// --- MÓDULO DE SINCRONIZACIÓN AUTOMÁTICA (sincronizacion.js) ---
+// --- MÓDULO DE SINCRONIZACIÓN AUTOMÁTICA CORREXIDO (sincronizacion.js) ---
 
-/**
- * Esta función se ejecuta sola al cargar la página.
- * Busca los datos en la nube y actualiza la App automáticamente.
- */
 (function descargarDatosAlInicio() {
-    // Si no hay URL configurada, no hace nada
-    if (!window.SCRIPT_URL || window.SCRIPT_URL.includes("TU_URL_AQUI")) return;
+    if (!window.SCRIPT_URL) return;
 
-    console.log("Conectando coa nube para descargar datos...");
+    console.log("Conectando coa nube...");
 
     fetch(window.SCRIPT_URL)
         .then(response => response.json())
         .then(datosNube => {
             if (datosNube && typeof datosNube === 'object') {
-                // Guardamos lo que viene de la nube en la memoria del navegador
                 window.db = datosNube;
                 localStorage.setItem('melide_db', JSON.stringify(window.db));
-                console.log("Sincronización inicial completada con éxito.");
+                console.log("Sincronización inicial OK");
                 
-                // Si estamos en una pantalla que muestra datos, la refrescamos
-                if (typeof renderizarListaActividades === 'function') renderizarListaActividades();
+                // Forzamos que la pantalla se dibuje se xa estamos dentro
+                if (typeof inicializarApp === 'function') inicializarApp();
             }
         })
-        .catch(err => console.warn("Modo offline: Usando datos gardados no navegador."));
+        .catch(err => console.warn("Modo offline activo."));
 })();
 
-/**
- * Envía los datos a Google Sheets de forma transparente.
- */
 function enviarDatosAWebApp() {
-    if (!window.SCRIPT_URL || window.SCRIPT_URL.includes("TU_URL_AQUI")) return;
+    if (!window.SCRIPT_URL) return;
 
     const datos = {
         action: "updateDB",
@@ -39,22 +30,18 @@ function enviarDatosAWebApp() {
         fecha: new Date().toLocaleString()
     };
 
-    // Enviamos los datos "en segundo plano"
+    // CAMBIO CLAVE: Eliminamos 'no-cors' para que Google non nos bloquee
     fetch(window.SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors', 
-        cache: 'no-cache',
-        headers: { 'Content-Type': 'application/json' },
+        mode: 'cors', 
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(datos)
     })
-    .then(() => console.log("Copia de seguridade enviada á nube automaticamente."))
+    .then(res => res.json())
+    .then(res => console.log("Garda con éxito:", res))
     .catch(err => console.error("Erro ao sincronizar:", err));
 }
 
-/**
- * Función por si quieres forzar la subida manualmente (opcional)
- */
 function forzarSincro() {
-    console.log("Forzando subida...");
     enviarDatosAWebApp();
 }
