@@ -116,7 +116,6 @@ function editarAlumno(index) {
     const al = window.db.Alumnos[index];
     const modalBody = document.getElementById('modal-body');
     
-    // Restauramos todos los campos y cajones de datos originales
     modalBody.innerHTML = `
         <div style="padding:15px; text-align:left; background:#f8fafc; border-radius:20px;">
             <h2 style="color:#005696; margin-bottom:20px; font-size:1.5rem; text-align:center;">DATOS DO ALUMNO</h2>
@@ -185,19 +184,34 @@ function cambiarEstadoAlumno(index, nuevoEstado) {
 function verHistorialAsistencias(index) {
     const al = window.db.Alumnos[index];
     const modalBody = document.getElementById('modal-body');
-    let html = `<h3 style="margin-top:0; color:#005696;">Historial: ${al.nome}</h3><div style="max-height:250px; overflow-y:auto;">`;
-    const asistencias = al.asistencias || {};
-    const fechas = Object.keys(asistencias).sort().reverse();
-    if (fechas.length === 0) { html += `<p>Sen rexistros.</p>`; } 
-    else {
-        fechas.forEach(f => {
-            html += `<div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #eee;">
-                <span>${f}</span><span>${asistencias[f] ? '✅ PRESENTE' : '❌ AUSENTE'}</span>
-            </div>`;
-        });
-    }
-    html += `</div><button onclick="closeModal()" style="width:100%; margin-top:15px; padding:10px; background:#005696; color:white; border:none; border-radius:10px;">PECHAR</button>`;
-    modalBody.innerHTML = html;
+    
+    // Corregido: Estética unificada y delimitación con scroll
+    modalBody.style.padding = "0"; 
+    modalBody.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#f1f5f9; padding:15px 20px; border-radius:25px 25px 0 0; border-bottom:1px solid #e2e8f0;">
+            <span style="font-weight:bold; color:#64748b; font-size:0.85rem; text-transform:uppercase;">HISTORIAL ASISTENCIA</span>
+            <button onclick="closeModal()" style="background:#cbd5e1; border:none; color:white; width:30px; height:30px; border-radius:50%; font-size:1.2rem; cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:bold;">&times;</button>
+        </div>
+        <div style="padding:20px;">
+            <h3 style="margin:0 0 15px 0; color:#005696; font-size:1.2rem; text-transform:uppercase;">${al.nome} ${al.apelidos || ''}</h3>
+            <div style="max-height:300px; overflow-y:auto; border:1px solid #eee; border-radius:15px; background:#f8fafc; padding:5px;">
+                ${(() => {
+                    const asistencias = al.asistencias || {};
+                    const fechas = Object.keys(asistencias).sort().reverse();
+                    if (fechas.length === 0) return `<p style="padding:20px; text-align:center; color:#94a3b8;">Sen rexistros de asistencia.</p>`;
+                    return fechas.map(f => `
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 15px; border-bottom:1px solid #edf2f7; background:white; margin:5px; border-radius:10px;">
+                            <span style="font-weight:bold; color:#475569; font-size:0.9rem;">${f}</span>
+                            <span style="font-size:0.85rem; font-weight:bold; color:${asistencias[f] ? '#16a34a' : '#ef4444'};">
+                                ${asistencias[f] ? '✅ PRESENTE' : '❌ AUSENTE'}
+                            </span>
+                        </div>
+                    `).join('');
+                })()}
+            </div>
+            <button onclick="closeModal()" style="width:100%; margin-top:20px; padding:15px; background:#005696; color:white; border:none; border-radius:12px; font-weight:bold; cursor:pointer;">PECHAR</button>
+        </div>
+    `;
     document.getElementById('modal-overlay').classList.add('active');
 }
 
