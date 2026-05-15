@@ -32,7 +32,7 @@ function verificarEstructuraAulas() {
     if (!window.db.Aulas) window.db.Aulas = [];
     
     window.db.Aulas.forEach(a => {
-        // CORRECCIÓN QUIRÚRGICA: Si 'lugares' está vacío pero 'espacios' tiene datos, los rescatamos
+        // Rescatamos datos de 'espacios' si 'lugares' viene vacío de la nube
         if ((!a.lugares || a.lugares.length === 0) && (a.espacios && a.espacios.length > 0)) {
             a.lugares = [...a.espacios];
         }
@@ -109,13 +109,15 @@ function renderHtmlLugares(lugares, aulaIdx) {
 
 function engadirLugarALista(idx) {
     const input = document.getElementById('nuevo-lugar-input');
+    if (!input) return;
     const valor = input.value.trim().toUpperCase();
     if (!valor) return;
 
     if (!window.db.Aulas[idx].lugares.includes(valor)) {
         window.db.Aulas[idx].lugares.push(valor);
-        saveData();
-        document.getElementById('lista-lugares-modal').innerHTML = renderHtmlLugares(window.db.Aulas[idx].lugares, idx);
+        if (typeof saveData === 'function') saveData();
+        const listaDiv = document.getElementById('lista-lugares-modal');
+        if (listaDiv) listaDiv.innerHTML = renderHtmlLugares(window.db.Aulas[idx].lugares, idx);
         input.value = "";
         mostrarAulas(); 
     } else {
@@ -126,8 +128,9 @@ function engadirLugarALista(idx) {
 function eliminarLugarDeLista(aulaIdx, lugarIdx) {
     if (confirm("¿Eliminar esta localización?")) {
         window.db.Aulas[aulaIdx].lugares.splice(lugarIdx, 1);
-        saveData();
-        document.getElementById('lista-lugares-modal').innerHTML = renderHtmlLugares(window.db.Aulas[aulaIdx].lugares, aulaIdx);
+        if (typeof saveData === 'function') saveData();
+        const listaDiv = document.getElementById('lista-lugares-modal');
+        if (listaDiv) listaDiv.innerHTML = renderHtmlLugares(window.db.Aulas[aulaIdx].lugares, aulaIdx);
         mostrarAulas();
     }
 }
@@ -135,7 +138,7 @@ function eliminarLugarDeLista(aulaIdx, lugarIdx) {
 function borrarInstalacionCompleta(idx) {
     if (confirm("¿ESTÁS SEGURO? Eliminarás toda a instalación e as súas localizacións.")) {
         window.db.Aulas.splice(idx, 1);
-        saveData();
+        if (typeof saveData === 'function') saveData();
         closeModal();
         mostrarAulas();
     }
@@ -158,11 +161,13 @@ function formAula() {
 }
 
 function guardarAula() {
-    const nome = document.getElementById('a-nome').value.trim().toUpperCase();
+    const nomeInput = document.getElementById('a-nome');
+    if (!nomeInput) return;
+    const nome = nomeInput.value.trim().toUpperCase();
     if (nome) { 
         if (!window.db.Aulas) window.db.Aulas = [];
         window.db.Aulas.push({ nome: nome, lugares: [] }); 
-        saveData();
+        if (typeof saveData === 'function') saveData();
         closeModal(); 
         mostrarAulas(); 
     }
