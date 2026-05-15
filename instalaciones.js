@@ -7,13 +7,11 @@ function mostrarAulas() {
     const container = document.getElementById('data-container');
     if (!actions || !container) return;
 
-    // --- PROTECCIÓN DE DATOS (Solución al vacío en web) ---
     if (!window.db || !window.db.Aulas || window.db.Aulas.length === 0) {
         container.innerHTML = `<div style="text-align:center; color:white; padding:40px; font-weight:bold;">CARGANDO INSTALACIÓNS...</div>`;
         setTimeout(mostrarAulas, 500); 
         return;
     }
-    // ------------------------------------------------------
 
     actions.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:20px;">
@@ -24,7 +22,6 @@ function mostrarAulas() {
     
     verificarEstructuraAulas();
 
-    // Usamos una copia para no alterar la DB original al ordenar
     const listaAulas = [...window.db.Aulas];
     listaAulas.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
     
@@ -34,16 +31,11 @@ function mostrarAulas() {
 function verificarEstructuraAulas() {
     if (!window.db.Aulas) window.db.Aulas = [];
     
-    // CORRECCIÓN: Búsqueda insensible a mayúsculas/minúsculas para evitar vacíos en la sincronización web
-    let tieneParroquias = window.db.Aulas.some(a => 
-        a.nome && a.nome.toString().toUpperCase() === "PARROQUIAS"
-    );
-
-    if (!tieneParroquias) {
-        window.db.Aulas.push({ nome: "PARROQUIAS", lugares: [] });
-    }
-
     window.db.Aulas.forEach(a => {
+        // CORRECCIÓN QUIRÚRGICA: Si 'lugares' está vacío pero 'espacios' tiene datos, los rescatamos
+        if ((!a.lugares || a.lugares.length === 0) && (a.espacios && a.espacios.length > 0)) {
+            a.lugares = [...a.espacios];
+        }
         if (!a.lugares) a.lugares = [];
     });
 }
@@ -59,7 +51,8 @@ function renderListaAulas(lista) {
         const card = document.createElement('div');
         card.style.cssText = "background:white; padding:25px; border-radius:20px; text-align:center; cursor:pointer; box-shadow:0 4px 15px rgba(0,0,0,0.1); border-top:8px solid #005696; color:#333;";
         
-        const esParroquia = aula.nome && aula.nome.toUpperCase() === "PARROQUIAS";
+        const nomeUpper = (aula.nome || "").toUpperCase();
+        const esParroquia = nomeUpper.includes("PARROQ");
         const numLugares = (aula.lugares || []).length;
         
         card.innerHTML = `
@@ -121,7 +114,7 @@ function engadirLugarALista(idx) {
 
     if (!window.db.Aulas[idx].lugares.includes(valor)) {
         window.db.Aulas[idx].lugares.push(valor);
-        if (typeof saveData === 'function') { saveData(); }
+        saveData();
         document.getElementById('lista-lugares-modal').innerHTML = renderHtmlLugares(window.db.Aulas[idx].lugares, idx);
         input.value = "";
         mostrarAulas(); 
@@ -133,8 +126,8 @@ function engadirLugarALista(idx) {
 function eliminarLugarDeLista(aulaIdx, lugarIdx) {
     if (confirm("¿Eliminar esta localización?")) {
         window.db.Aulas[aulaIdx].lugares.splice(lugarIdx, 1);
-        if (typeof saveData === 'function') { saveData(); }
-        document.getElementById('lista-lugares-modal').innerHTML = renderHtmlLugares(window.db.Aulas[idx].lugares, aulaIdx);
+        saveData();
+        document.getElementById('lista-lugares-modal').innerHTML = renderHtmlLugares(window.db.Aulas[aulaIdx].lugares, aulaIdx);
         mostrarAulas();
     }
 }
@@ -142,7 +135,7 @@ function eliminarLugarDeLista(aulaIdx, lugarIdx) {
 function borrarInstalacionCompleta(idx) {
     if (confirm("¿ESTÁS SEGURO? Eliminarás toda a instalación e as súas localizacións.")) {
         window.db.Aulas.splice(idx, 1);
-        if (typeof saveData === 'function') { saveData(); }
+        saveData();
         closeModal();
         mostrarAulas();
     }
@@ -169,7 +162,7 @@ function guardarAula() {
     if (nome) { 
         if (!window.db.Aulas) window.db.Aulas = [];
         window.db.Aulas.push({ nome: nome, lugares: [] }); 
-        if (typeof saveData === 'function') { saveData(); }
+        saveData();
         closeModal(); 
         mostrarAulas(); 
     }
