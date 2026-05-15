@@ -1,5 +1,5 @@
 // ==========================================
-// MÓDULO: INSTALACIONES (instalaciones.js)
+// MÓDULO: INSTALACIÓNS (instalaciones.js)
 // ==========================================
 
 function mostrarAulas() {
@@ -8,8 +8,6 @@ function mostrarAulas() {
     if (!actions || !container) return;
 
     // --- PROTECCIÓN DE DATOS (Solución al vacío en web) ---
-    // Si la base de datos aún no tiene las 10 aulas que vimos en consola, 
-    // mostramos un aviso y reintentamos en medio segundo.
     if (!window.db || !window.db.Aulas || window.db.Aulas.length === 0) {
         container.innerHTML = `<div style="text-align:center; color:white; padding:40px; font-weight:bold;">CARGANDO INSTALACIÓNS...</div>`;
         setTimeout(mostrarAulas, 500); 
@@ -36,7 +34,11 @@ function mostrarAulas() {
 function verificarEstructuraAulas() {
     if (!window.db.Aulas) window.db.Aulas = [];
     
-    let tieneParroquias = window.db.Aulas.some(a => a.nome && a.nome.toUpperCase() === "PARROQUIAS");
+    // CORRECCIÓN: Búsqueda insensible a mayúsculas/minúsculas para evitar vacíos en la sincronización web
+    let tieneParroquias = window.db.Aulas.some(a => 
+        a.nome && a.nome.toString().toUpperCase() === "PARROQUIAS"
+    );
+
     if (!tieneParroquias) {
         window.db.Aulas.push({ nome: "PARROQUIAS", lugares: [] });
     }
@@ -132,7 +134,7 @@ function eliminarLugarDeLista(aulaIdx, lugarIdx) {
     if (confirm("¿Eliminar esta localización?")) {
         window.db.Aulas[aulaIdx].lugares.splice(lugarIdx, 1);
         if (typeof saveData === 'function') { saveData(); }
-        document.getElementById('lista-lugares-modal').innerHTML = renderHtmlLugares(window.db.Aulas[aulaIdx].lugares, aulaIdx);
+        document.getElementById('lista-lugares-modal').innerHTML = renderHtmlLugares(window.db.Aulas[idx].lugares, aulaIdx);
         mostrarAulas();
     }
 }
