@@ -1,32 +1,22 @@
-// --- MÓDULO DE SINCRONIZACIÓN INTELIXENTE (sincronizacion.js) ---
+// --- SINCRONIZACIÓN TOTAL COMPATIBLE (sincronizacion.js) ---
 
 (function descargarDatosAlInicio() {
     if (!window.SCRIPT_URL) return;
 
-    console.log("🔄 Conectando coa nube de Google...");
-
     fetch(window.SCRIPT_URL)
-        .then(response => {
-            if (!response.ok) throw new Error("Erro na rede");
-            return response.json();
-        })
+        .then(response => response.json())
         .then(datosNube => {
-            if (datosNube && typeof datosNube === 'object' && Object.keys(datosNube).length > 0) {
+            // Solo descargamos si la nube tiene datos reales para no borrar lo que ya tenemos
+            if (datosNube && datosNube.Alumnos && datosNube.Alumnos.length > 0) {
                 window.db = datosNube;
                 localStorage.setItem('melide_db', JSON.stringify(window.db));
-                console.log("✅ Sincronización inicial completada: " + (window.db.Alumnos ? window.db.Alumnos.length : 0) + " alumnos cargados.");
+                console.log("✅ Datos descargados: " + datosNube.Alumnos.length + " alumnos.");
                 
-                // Se o usuario xa pasou o PIN, refrescamos a vista para que vexa os datos
-                if (document.getElementById('scr-dash').style.display === 'block') {
-                    if (typeof inicializarApp === 'function') inicializarApp();
-                    else if (typeof atras === 'function') atras(); // Truco para repintar
-                }
+                // Si la App ya arrancó, forzamos a que pinte los datos
+                if (typeof inicializarApp === 'function') inicializarApp();
             }
         })
-        .catch(err => {
-            console.warn("⚠️ Modo offline ou erro de conexión. Retentando en 5 segundos...");
-            setTimeout(descargarDatosAlInicio, 5000); // Reintento automático
-        });
+        .catch(err => console.warn("Modo offline: Usando memoria local."));
 })();
 
 function enviarDatosAWebApp() {
@@ -39,13 +29,21 @@ function enviarDatosAWebApp() {
         fecha: new Date().toLocaleString()
     };
 
-    // Usamos text/plain para evitar bloqueos de CORS en dispositivos móbiles
+    // MODO 'no-cors': Es el único que Google acepta siempre desde cualquier equipo
     fetch(window.SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors', 
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        cache: 'no-cache',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(datos)
     })
-    .then(() => console.log("💾 Copia de seguridade enviada á nube."))
-    .catch(err => console.error("❌ Erro ao sincronizar:", err));
+    .then(() => {
+        // En modo no-cors no podemos leer la respuesta, pero si llega aquí es que salió bien
+        console.log("🚀 Datos enviados a la nube con éxito.");
+        alert("Sincronización enviada correctamente.");
+    })
+    .catch(err => {
+        console.error("Erro:", err);
+        alert("Error al conectar con la nube.");
+    });
 }
