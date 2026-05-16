@@ -95,8 +95,8 @@ function importarDatosJSON(event) {
             const importado = JSON.parse(e.target.result);
             if (confirm("¿Sobrescribir todos los datos actuales?")) {
                 window.db = importado;
-                if (typeof guardarDB === 'function') guardarDB();
-                else localStorage.setItem('licitacion_db', JSON.stringify(window.db));
+                if (typeof saveData === 'function') saveData();
+                else localStorage.setItem('melide_db', JSON.stringify(window.db));
                 alert("Datos restaurados.");
                 renderizarAmbosCuadrantes();
             }
@@ -108,8 +108,8 @@ function importarDatosJSON(event) {
 function borrarTodaLaBD() {
     if (confirm("¿ELIMINAR TODO? Esta acción es definitiva.")) {
         window.db = { Centros: [], Aulas: [], Monitores: [], Actividades: [], Material: [] };
-        if (typeof guardarDB === 'function') guardarDB();
-        else localStorage.setItem('licitacion_db', JSON.stringify(window.db));
+        if (typeof saveData === 'function') saveData();
+        else localStorage.setItem('melide_db', JSON.stringify(window.db));
         location.reload();
     }
 }

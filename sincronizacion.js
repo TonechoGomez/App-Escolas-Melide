@@ -1,26 +1,39 @@
-// --- SINCRONIZACIÓN TOTAL COMPATIBLE (sincronizacion.js) ---
+// --- MÓDULO DE SINCRONIZACIÓN AUTOMÁTICA (sincronizacion.js) ---
 
+/**
+ * Esta función se ejecuta sola al cargar la página.
+ * Busca los datos en la nube y actualiza la App automáticamente.
+ */
 (function descargarDatosAlInicio() {
-    if (!window.SCRIPT_URL) return;
+    // Si no hay URL configurada, no hace nada
+    if (!window.SCRIPT_URL || window.SCRIPT_URL.includes("TU_URL_AQUI")) return;
+
+    console.log("Conectando coa nube para descargar datos...");
 
     fetch(window.SCRIPT_URL)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) throw new Error("Erro na resposta del servidor");
+            return response.json();
+        })
         .then(datosNube => {
-            // Solo descargamos si la nube tiene datos reales para no borrar lo que ya tenemos
-            if (datosNube && datosNube.Alumnos && datosNube.Alumnos.length > 0) {
+            if (datosNube && typeof datosNube === 'object') {
+                // Guardamos lo que viene de la nube en la memoria del navegador
                 window.db = datosNube;
                 localStorage.setItem('melide_db', JSON.stringify(window.db));
-                console.log("✅ Datos descargados: " + datosNube.Alumnos.length + " alumnos.");
+                console.log("Sincronización inicial completada con éxito.");
                 
-                // Si la App ya arrancó, forzamos a que pinte los datos
-                if (typeof inicializarApp === 'function') inicializarApp();
+                // Si estamos en una pantalla que muestra datos, la refrescamos
+                if (typeof renderizarListaActividades === 'function') renderizarListaActividades();
             }
         })
-        .catch(err => console.warn("Modo offline: Usando memoria local."));
+        .catch(err => console.warn("Modo offline: Usando datos gardados no navegador."));
 })();
 
+/**
+ * Envía los datos a Google Sheets de forma transparente.
+ */
 function enviarDatosAWebApp() {
-    if (!window.SCRIPT_URL) return;
+    if (!window.SCRIPT_URL || window.SCRIPT_URL.includes("TU_URL_AQUI")) return;
 
     const datos = {
         action: "updateDB",
@@ -29,21 +42,21 @@ function enviarDatosAWebApp() {
         fecha: new Date().toLocaleString()
     };
 
-    // MODO 'no-cors': Es el único que Google acepta siempre desde cualquier equipo
+    // Enviamos los datos de manera estándar para permitir la comunicación bidireccional limpia
     fetch(window.SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors', 
         cache: 'no-cache',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: JSON.stringify(datos)
     })
-    .then(() => {
-        // En modo no-cors no podemos leer la respuesta, pero si llega aquí es que salió bien
-        console.log("🚀 Datos enviados a la nube con éxito.");
-        alert("Sincronización enviada correctamente.");
-    })
-    .catch(err => {
-        console.error("Erro:", err);
-        alert("Error al conectar con la nube.");
-    });
+    .then(() => console.log("Copia de seguridade enviada á nube automaticamente."))
+    .catch(err => console.error("Erro ao sincronizar:", err));
+}
+
+/**
+ * Función por si quieres forzar la subida manualmente (opcional)
+ */
+function forzarSincro() {
+    console.log("Forzando subida...");
+    enviarDatosAWebApp();
 }
