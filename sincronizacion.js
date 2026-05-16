@@ -42,11 +42,11 @@ function enviarDatosAWebApp() {
         fecha: new Date().toLocaleString()
     };
 
-    // Enviamos los datos de manera estándar para permitir la comunicación bidireccional limpia
+    // Enviamos como texto plano para saltar las restricciones de CORS de forma limpia
     fetch(window.SCRIPT_URL, {
         method: 'POST',
-        cache: 'no-cache',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        mode: 'no-cors', // Volvemos a asegurar la compatibilidad de subida pura
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(datos)
     })
     .then(() => console.log("Copia de seguridade enviada á nube automaticamente."))
