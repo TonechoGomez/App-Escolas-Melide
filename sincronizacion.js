@@ -2,10 +2,9 @@
 
 /**
  * Esta función se ejecuta sola al cargar la página.
- * Busca los datos en la nube y actualiza la App automáticamente.
+ * Busca los datos en la nube, los desempaqueta si es necesario y actualiza la App.
  */
 (function descargarDatosAlInicio() {
-    // Si no hay URL configurada, no hace nada
     if (!window.SCRIPT_URL || window.SCRIPT_URL.includes("TU_URL_AQUI")) return;
 
     console.log("Conectando coa nube para descargar datos...");
@@ -17,12 +16,19 @@
         })
         .then(datosNube => {
             if (datosNube && typeof datosNube === 'object' && Object.keys(datosNube).length > 0) {
-                // Guardamos lo que viene de la nube en la memoria del navegador
-                window.db = datosNube;
+                
+                // COMPROBACIÓN Y DESEMPAQUETADO: Si los datos vienen dentro de la propiedad 'db'
+                if (datosNube.db && typeof datosNube.db === 'object') {
+                    window.db = datosNube.db;
+                } else {
+                    window.db = datosNube;
+                }
+
+                // Guardamos la base de datos limpia en la memoria del navegador
                 localStorage.setItem('melide_db', JSON.stringify(window.db));
                 console.log("Sincronización inicial completada con éxito.");
                 
-                // Refrescamos la interfaz llamando a la función de dibujo que esté activa
+                // Refrescamos la interfaz llamando a la función de dibujo activa
                 if (typeof render === 'function') {
                     render();
                 } else if (typeof renderizarListaActividades === 'function') {
@@ -46,7 +52,6 @@ function enviarDatosAWebApp() {
         fecha: new Date().toLocaleString()
     };
 
-    // Enviamos como texto plano para saltar las restricciones de CORS de forma limpia
     fetch(window.SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
