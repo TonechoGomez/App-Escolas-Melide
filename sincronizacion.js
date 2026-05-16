@@ -10,7 +10,7 @@
 
     console.log("Conectando coa nube para descargar datos...");
 
-    fetch(window.SCRIPT_URL)
+ //   fetch(window.SCRIPT_URL)
         .then(response => {
             if (!response.ok) throw new Error("Erro na resposta del servidor");
             return response.json();
