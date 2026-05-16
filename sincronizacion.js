@@ -10,20 +10,24 @@
 
     console.log("Conectando coa nube para descargar datos...");
 
- //   fetch(window.SCRIPT_URL)
+    fetch(window.SCRIPT_URL)
         .then(response => {
             if (!response.ok) throw new Error("Erro na resposta del servidor");
             return response.json();
         })
         .then(datosNube => {
-            if (datosNube && typeof datosNube === 'object') {
+            if (datosNube && typeof datosNube === 'object' && Object.keys(datosNube).length > 0) {
                 // Guardamos lo que viene de la nube en la memoria del navegador
                 window.db = datosNube;
                 localStorage.setItem('melide_db', JSON.stringify(window.db));
                 console.log("Sincronización inicial completada con éxito.");
                 
-                // Si estamos en una pantalla que muestra datos, la refrescamos
-                if (typeof renderizarListaActividades === 'function') renderizarListaActividades();
+                // Refrescamos la interfaz llamando a la función de dibujo que esté activa
+                if (typeof render === 'function') {
+                    render();
+                } else if (typeof renderizarListaActividades === 'function') {
+                    renderizarListaActividades();
+                }
             }
         })
         .catch(err => console.warn("Modo offline: Usando datos gardados no navegador."));
@@ -45,7 +49,7 @@ function enviarDatosAWebApp() {
     // Enviamos como texto plano para saltar las restricciones de CORS de forma limpia
     fetch(window.SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors', // Volvemos a asegurar la compatibilidad de subida pura
+        mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(datos)
     })
@@ -54,7 +58,7 @@ function enviarDatosAWebApp() {
 }
 
 /**
- * Función por si quieres forzar la subida manualmente (opcional)
+ * Función para forzar la subida manualmente desde la consola del navegador
  */
 function forzarSincro() {
     console.log("Forzando subida...");
